@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherSphere</title>
+
+    <!-- Google Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/your-kit.js" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+    <!-- ================= NAVBAR ================= -->
+
+    <nav>
+
+        <div class="logo">
+            🌤 WeatherSphere
+        </div>
+
+        <ul>
+
+            <li><a href="#">Home</a></li>
+
+            <li><a href="#">Forecast</a></li>
+
+            <li><a href="#">Favorites</a></li>
+
+            <li><a href="#">About</a></li>
+
+        </ul>
+
+        <button id="themeBtn">
+            🌙
+        </button>
+
+    </nav>
+
+    <!-- ================= HERO ================= -->
+
+    <header class="hero">
+
+        <h1>Global Weather Forecast</h1>
+
+        <p>
+            Search any city in the world and get
+            live weather updates, hourly forecast,
+            weekly forecast and much more.
+        </p>
+
+        <!-- Search -->
+
+        <div class="search-box">
+
+           <input
+             type="text"
+             id="cityInput"
+             placeholder="Search any city..."
+            >
+
+           <button id="searchBtn">
+             🔍 Search
+          </button>
+
+           <button id="locationBtn">
+             <i class="fa-solid fa-location-crosshairs"></i>
+              Current Location
+          </button>
+
+          <button id="favBtn">
+              ⭐ Add to Favorites
+          </button>
+       </div>
+
+    </header>
+
+    <!-- ============== SEARCH HISTORY =====================-->
+
+    <section class="searchHistory">
+
+      <h2>🕒 Recent Searches</h2>
+
+      <div id="historyContainer"></div>
+
+      <button id="clearHistoryBtn" class="clear-history-btn">
+          🗑 Clear History
+       </button>
+
+    </section>
+
+    <!-- ================= CURRENT WEATHER ================= -->
+
+    <section class="weatherCard">
+
+        <div class="left">
+
+            <h2 id="cityName">Pune</h2>
+
+            <h3 id="countryName">India</h3>
+
+            <img id="weatherIcon" src="images/sun.png" alt="Weather Icon">
+
+            <h1 id="temperature">31°C</h1>
+
+            <p id="condition">Sunny</p>
+
+        </div>
+
+        <div class="right">
+
+            <div class="item">
+                💧 Humidity
+                <span id="humidity">72%</span>
+            </div>
+
+            <div class="item">
+                💨 Wind
+                <span id="wind">14 km/h</span>
+            </div>
+
+            <div class="item">
+                🌡 Pressure
+                <span id="pressure">1014 hPa</span>
+            </div>
+
+            <div class="item">
+                🌡 Feels Like
+               <span id="feelsLike">--</span>
+           </div>
+
+            <div class="item">
+                🌅 Sunrise
+                <span id="sunrise">06:02 AM</span>
+            </div>
+
+            <div class="item">
+                🌇 Sunset
+                <span id="sunset">07:11 PM</span>
+            </div>
+
+            <div class="item">
+                ☀ UV Index
+                <span id="uv">7</span>
+            </div>
+
+            <div class="item">
+               🌫 Air Quality
+               <span id="aqi">--</span>
+           </div>
+
+            <div class="item">
+             🌙 Moon Phase
+             <span id="moonPhase">--</span>
+           </div>
+
+           <div class="item">
+              🌙 Moonrise
+              <span id="moonrise">--</span>
+           </div>
+
+           <div class="item">
+              🌙 Moonset
+              <span id="moonset">--</span>
+           </div>
+
+           <div class="item">
+              💡 Moon Illumination
+              <span id="moonIllumination">--</span>
+           </div>
+        </div>
+
+    </section>
+
+    <!-- ================== Weather Alerts================-->
+
+    <section class="alertsSection">
+
+     <h2>⚠ Weather Alerts</h2>
+
+     <div id="alertsContainer">
+
+        <p>No alerts available.</p>
+
+     </div>
+
+    </section>
+
+    <!-- ================= HIGHLIGHTS ================= -->
+
+    <section class="highlights">
+
+        <h2>Today's Highlights</h2>
+
+        <div class="cards">
+
+            <div class="card">
+                🌫
+                <h3>Air Quality</h3>
+                <p>Good</p>
+            </div>
+
+            <div class="card">
+                🌧
+                <h3>Chance of Rain</h3>
+                <p>10%</p>
+            </div>
+
+            <div class="card">
+                👁
+                <h3>Visibility</h3>
+                <p>12 km</p>
+            </div>
+
+            <div class="card">
+                🌡
+                <h3>Feels Like</h3>
+                <p>33°C</p>
+            </div>
+
+        </div>
+
+    </section>
+
+    <!-- ================= 24 HOURS ================= -->
+
+    <section class="hourly">
+
+     <h2>Upcoming 24 Hours</h2>
+
+     <div class="hourContainer" id="hourContainer">
+
+     </div>
+
+    </section>
+
+    <!-- =========== Weather Map ====================-->
+
+    <section class="mapSection">
+
+     <h2>🗺 Weather Map</h2>
+
+     <div id="weatherMap"></div>
+
+    </section>
+
+    <!-- =================== 24 Hour Temperature Trend ================-->
+    <section class="chartSection">
+
+     <h2>📈 24 Hour Temperature Trend</h2>
+
+     <canvas id="temperatureChart"></canvas>
+   </section>
+
+    <!-- ================= 7 DAYS ================= -->
+
+    <section class="weekly">
+
+      <h2>7 Day Forecast</h2>
+
+      <table>
+
+         <thead>
+
+            <tr>
+
+                <th>Day</th>
+
+                <th>Condition</th>
+
+                <th>Temperature</th>
+
+            </tr>
+
+         </thead>
+
+         <tbody id="weeklyForecast">
+
+          </tbody>
+      </table>
+  </section>
+
+    <!-- ================= FAVORITES ================= -->
+
+    <section class="favorites">
+
+        <h2>Favorite Cities</h2>
+
+        <div id="favoriteContainer"></div>
+
+
+    </section>
+
+    <!-- ================= FOOTER ================= -->
+
+    <footer>
+
+        <h3>WeatherSphere</h3>
+
+        <p>
+            Global Weather Forecast Website
+        </p>
+
+        <p>
+            Made with ❤️ using HTML, CSS, JavaScript,
+            Node.js and MongoDB.
+        </p>
+
+    </footer>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/weather.js"></script>
+    <script src="js/forecast.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/favourites.js"></script>
+    <script src="js/searchHistory.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/alerts.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>
