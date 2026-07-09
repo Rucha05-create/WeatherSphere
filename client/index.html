@@ -13,8 +13,10 @@
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-    <!-- Font Awesome -->
-    <script src="https://kit.fontawesome.com/your-kit.js" crossorigin="anonymous"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
 </head>
 
 <body>
@@ -29,17 +31,18 @@
 
         <ul>
 
-            <li><a href="#">Home</a></li>
+          <li><a href="#home">Home</a></li>
 
-            <li><a href="#">Forecast</a></li>
+          <li><a href="#forecast">Forecast</a></li>
 
-            <li><a href="#">Favorites</a></li>
+          <li><a href="#favorites">Favorites</a></li>
 
-            <li><a href="#">About</a></li>
+          <li><a href="#about">About</a></li>
 
         </ul>
 
         <button id="themeBtn">
+            
             🌙
         </button>
 
@@ -47,7 +50,7 @@
 
     <!-- ================= HERO ================= -->
 
-    <header class="hero">
+    <header class="hero" id="home">
 
         <h1>Global Weather Forecast</h1>
 
@@ -68,16 +71,17 @@
             >
 
            <button id="searchBtn">
-             🔍 Search
-          </button>
-
+               <i class="fa-solid fa-magnifying-glass"></i>
+               Search
+           </button>
+           
            <button id="locationBtn">
              <i class="fa-solid fa-location-crosshairs"></i>
               Current Location
           </button>
 
           <button id="favBtn">
-              ⭐ Add to Favorites
+             ⭐ Add to Favorites
           </button>
        </div>
 
@@ -92,6 +96,7 @@
       <div id="historyContainer"></div>
 
       <button id="clearHistoryBtn" class="clear-history-btn">
+        
           🗑 Clear History
        </button>
 
@@ -232,7 +237,7 @@
 
     <!-- ================= 24 HOURS ================= -->
 
-    <section class="hourly">
+    <section class="hourly" id="forecast">
 
      <h2>Upcoming 24 Hours</h2>
 
@@ -290,7 +295,7 @@
 
     <!-- ================= FAVORITES ================= -->
 
-    <section class="favorites">
+    <section class="favorites" id="favorites">
 
         <h2>Favorite Cities</h2>
 
@@ -301,7 +306,7 @@
 
     <!-- ================= FOOTER ================= -->
 
-    <footer>
+    <footer id="about">
 
         <h3>WeatherSphere</h3>
 
@@ -309,17 +314,13 @@
             Global Weather Forecast Website
         </p>
 
-        <p>
-            Made with ❤️ using HTML, CSS, JavaScript,
-            Node.js and MongoDB.
-        </p>
+    
 
     </footer>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/api.js"></script>
     <script src="js/config.js"></script>

@@ -1,4 +1,60 @@
+const Search = require("../models/SearchHistory");
+
+// ===============================
+// Save Search
+// ===============================
+
+const saveSearch = async (req, res) => {
+
+    try {
+
+        const search = new Search({
+            city: req.body.city,
+            country: req.body.country
+        });
+
+        await search.save();
+
+        res.status(201).json(search);
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: error.message
+        });
+
+    }
+
+};
+
+// ===============================
+// Get Search History
+// ===============================
+
+const getSearchHistory = async (req, res) => {
+
+    try {
+
+        const history = await Search.find().sort({
+            createdAt: -1
+        });
+
+        res.json(history);
+
+    } catch (error) {
+
+        res.status(500).json({
+            message: error.message
+        });
+
+    }
+
+};
+
+// ===============================
 // Delete One Search
+// ===============================
+
 const deleteSearch = async (req, res) => {
 
     try {
@@ -9,9 +65,7 @@ const deleteSearch = async (req, res) => {
             message: "Deleted Successfully"
         });
 
-    }
-
-    catch (error) {
+    } catch (error) {
 
         res.status(500).json({
             message: error.message
@@ -21,7 +75,10 @@ const deleteSearch = async (req, res) => {
 
 };
 
-// Delete All Searches
+// ===============================
+// Clear Search History
+// ===============================
+
 const clearSearchHistory = async (req, res) => {
 
     try {
@@ -32,9 +89,7 @@ const clearSearchHistory = async (req, res) => {
             message: "History Cleared Successfully"
         });
 
-    }
-
-    catch (error) {
+    } catch (error) {
 
         res.status(500).json({
             message: error.message
@@ -43,6 +98,10 @@ const clearSearchHistory = async (req, res) => {
     }
 
 };
+
+// ===============================
+// Export
+// ===============================
 
 module.exports = {
 
