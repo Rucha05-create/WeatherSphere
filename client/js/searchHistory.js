@@ -21,10 +21,20 @@ async function loadSearchHistory() {
         card.innerHTML = `
             <span>${item.city}, ${item.country}</span>
 
-            <button onclick="deleteHistory('${item._id}')">
-                🗑
-            </button>
+            <button class="delete-btn">
+               🗑
+           </button>
         `;
+
+        const deleteBtn = card.querySelector(".delete-btn");
+
+           deleteBtn.addEventListener("click", async (e) => {
+
+           e.stopPropagation();
+
+           await deleteHistory(item._id);
+
+        });
 
         card.addEventListener("click", () => {
 
@@ -81,7 +91,7 @@ async function deleteHistory(id) {
         }
     );
 
-    loadSearchHistory();
+    await loadSearchHistory();
 
 }
 
@@ -102,6 +112,10 @@ async function clearHistory() {
 
     );
 
-    loadSearchHistory();
+    await loadSearchHistory();
 
 }
+
+const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+clearHistoryBtn.addEventListener("click", clearSearchHistory);

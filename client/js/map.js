@@ -1,66 +1,236 @@
-// ===============================
-// WEATHER MAP
-// ===============================
+// ============================================================
+// WEATHERSPHERE - MAP.JS
+// ============================================================
 
-let map;
-let marker;
-let circle;
+let map = null;
+let marker = null;
+let circle = null;
 
-function updateWeatherMap(data)
-{
-    const latitude = data.location.lat;
-    const longitude = data.location.lon;
 
-    if (!map)
-    {
-        map = L.map("weatherMap").setView(
-            [latitude, longitude],
-            10
+// ============================================================
+// UPDATE WEATHER MAP
+// ============================================================
+
+function updateWeatherMap(data) {
+
+    // --------------------------------------------------------
+    // Get map container
+    // --------------------------------------------------------
+
+    const mapContainer =
+        document.getElementById("weatherMap");
+
+
+    if (!mapContainer) {
+
+        console.error(
+            "weatherMap container not found!"
         );
+
+        return;
+
+    }
+
+
+    // --------------------------------------------------------
+    // Get location
+    // --------------------------------------------------------
+
+    const latitude =
+        data.location.lat;
+
+    const longitude =
+        data.location.lon;
+
+
+    // --------------------------------------------------------
+    // Check coordinates
+    // --------------------------------------------------------
+
+    if (
+        latitude === undefined ||
+        longitude === undefined
+    ) {
+
+        console.error(
+            "Invalid latitude or longitude."
+        );
+
+        return;
+
+    }
+
+
+    // ========================================================
+    // CREATE MAP
+    // ========================================================
+
+    if (!map) {
+
+        map =
+            L.map("weatherMap").setView(
+                [latitude, longitude],
+                10
+            );
+
+
+        // ----------------------------------------------------
+        // OpenStreetMap Layer
+        // ----------------------------------------------------
 
         L.tileLayer(
             "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
             {
+
                 attribution:
                     "&copy; OpenStreetMap contributors"
+
             }
         ).addTo(map);
-    }
-    else
-    {
-        map.setView([latitude, longitude], 10);
+
     }
 
-    // Remove previous marker
-    if (marker)
-    {
+    else {
+
+        // ----------------------------------------------------
+        // Move existing map
+        // ----------------------------------------------------
+
+        map.setView(
+            [latitude, longitude],
+            10
+        );
+
+    }
+
+
+    // ========================================================
+    // REMOVE OLD MARKER
+    // ========================================================
+
+    if (marker) {
+
         map.removeLayer(marker);
+
+        marker = null;
+
     }
 
-    marker = L.marker([latitude, longitude])
+
+    // ========================================================
+    // ADD NEW MARKER
+    // ========================================================
+
+    marker =
+        L.marker([
+            latitude,
+            longitude
+        ])
+
+
         .addTo(map)
+
+
         .bindPopup(`
-            <b>${data.location.name}</b><br>
-            🌡 ${data.current.temp_c}°C<br>
-            ${data.current.condition.text}
+
+            <div class="weather-popup">
+
+                <strong>
+                    ${data.location.name}
+                </strong>
+
+                <br>
+
+                ${data.location.country}
+
+                <hr>
+
+                🌡 Temperature:
+                ${data.current.temp_c}°C
+
+                <br>
+
+                🌡 Feels Like:
+                ${data.current.feelslike_c}°C
+
+                <br>
+
+                ${data.current.condition.text}
+
+                <br>
+
+                💧 Humidity:
+                ${data.current.humidity}%
+
+                <br>
+
+                💨 Wind:
+                ${data.current.wind_kph} km/h
+
+            </div>
+
         `)
+
+
         .openPopup();
 
-    // Remove previous circle
-    if (circle)
-    {
+
+
+    // ========================================================
+    // REMOVE OLD CIRCLE
+    // ========================================================
+
+    if (circle) {
+
         map.removeLayer(circle);
+
+        circle = null;
+
     }
 
-    circle = L.circle([latitude, longitude], {
 
-        radius: 5000,
+    // ========================================================
+    // ADD LOCATION CIRCLE
+    // ========================================================
 
-        color: "#2196f3",
+    circle =
+        L.circle(
+            [
+                latitude,
+                longitude
+            ],
+            {
 
-        fillColor: "#64b5f6",
+                radius: 5000,
 
-        fillOpacity: 0.3
+                color: "#2196f3",
 
-    }).addTo(map);
+                fillColor: "#64b5f6",
+
+                fillOpacity: 0.3
+
+            }
+        ).addTo(map);
+
+
+    // ========================================================
+    // FIX MAP DISPLAY
+    // ========================================================
+
+    setTimeout(() => {
+
+        if (map) {
+
+            map.invalidateSize();
+
+        }
+
+    }, 200);
+
+
+    console.log(
+        "Weather map updated:",
+        data.location.name
+    );
+
 }

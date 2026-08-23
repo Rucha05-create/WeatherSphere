@@ -1,214 +1,689 @@
+// ============================================================
+// WEATHERSPHERE - WEATHER.JS
+// ============================================================
+
+
+// ============================================================
+// GET WEATHER
+// ============================================================
+
 async function getWeather(city) {
 
     try {
 
+        // ------------------------------------------------------
+        // SEARCH BUTTON LOADING
+        // ------------------------------------------------------
+
         searchBtn.innerHTML = "Searching...";
         searchBtn.disabled = true;
 
-        
+
+        // ------------------------------------------------------
+        // WEATHER API
+        // ------------------------------------------------------
 
         const response = await fetch(
-         `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${city}&days=7&aqi=yes&alerts=no`);
+            `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${city}&days=7&aqi=yes&alerts=no`
+        );
+
+
         const data = await response.json();
 
+
+        // ------------------------------------------------------
+        // API ERROR
+        // ------------------------------------------------------
+
         if (data.error) {
+
             alert(data.error.message);
+
             return;
+
         }
+
+
+        console.log(
+            "Weather API Response:",
+            data
+        );
+
+
+        // ------------------------------------------------------
+        // CURRENT WEATHER
+        // ------------------------------------------------------
 
         updateCurrentWeather(data);
 
-        updateHourlyForecast(data);
 
-        updateWeeklyForecast(data);
+        // ------------------------------------------------------
+        // 24 HOUR FORECAST
+        // ------------------------------------------------------
 
-        // Feature 8
-        //updateTemperatureChart(data);
+        if (
+            typeof updateHourlyForecast === "function"
+        ) {
 
-        //updateWeatherMap(data);
+            updateHourlyForecast(data);
 
-        //updateWeatherAlerts(data);
+        }
+
+
+        // ------------------------------------------------------
+        // 7 DAY FORECAST
+        // ------------------------------------------------------
+
+        if (
+            typeof updateWeeklyForecast === "function"
+        ) {
+
+            updateWeeklyForecast(data);
+
+        }
+
+
+        // ------------------------------------------------------
+        // 24 HOUR TEMPERATURE CHART
+        // ------------------------------------------------------
+
+        if (
+            typeof updateTemperatureChart === "function"
+        ) {
+
+            updateTemperatureChart(data);
+
+        }
+
+
+        // ------------------------------------------------------
+        // WEATHER MAP
+        // ------------------------------------------------------
+
+        if (
+            typeof updateWeatherMap === "function"
+        ) {
+
+            updateWeatherMap(data);
+
+        }
+
+
+        // ------------------------------------------------------
+        // WEATHER ALERTS
+        // ------------------------------------------------------
+
+        if (
+            typeof updateWeatherAlerts === "function"
+        ) {
+
+            updateWeatherAlerts(data);
+
+        }
 
     }
 
     catch (error) {
 
-        console.log(error);
+        console.error(
+            "Weather Error:",
+            error
+        );
+
+        alert(
+            "Unable to fetch weather data. Please try again."
+        );
 
     }
 
     finally {
 
-        searchBtn.innerHTML = "Search";
+        // ------------------------------------------------------
+        // RESET SEARCH BUTTON
+        // ------------------------------------------------------
+
+        searchBtn.innerHTML = `
+            <i class="fa-solid fa-magnifying-glass"></i>
+            Search
+        `;
+
         searchBtn.disabled = false;
 
     }
 
 }
 
-function updateCurrentWeather(data)
-{
-    cityName.textContent = capitalize(data.location.name);
 
-    function capitalize(text) {
 
-    return text.charAt(0).toUpperCase() + text.slice(1);
+// ============================================================
+// UPDATE CURRENT WEATHER
+// ============================================================
 
-}
+function updateCurrentWeather(data) {
 
-    countryName.textContent = data.location.country;
+    // ========================================================
+    // LOCATION
+    // ========================================================
 
-    // Save Search History
-    saveSearch(
-        data.location.name,
-        data.location.country
-    );
+    cityName.textContent =
+        capitalize(data.location.name);
 
-    loadSearchHistory();
 
-    // Current Temperature
-    temperature.textContent = data.current.temp_c + "°C";
+    countryName.textContent =
+        data.location.country;
 
-    // Feels Like Temperature
-    const feels = data.current.feelslike_c;
 
-    feelsLike.textContent = feels + "°C";
+    // ========================================================
+    // SAVE SEARCH HISTORY
+    // ========================================================
 
-    if (feels >= 35)
-    {
+    if (
+        typeof saveSearch === "function"
+    ) {
+
+        saveSearch(
+            data.location.name,
+            data.location.country
+        );
+
+    }
+
+
+    if (
+        typeof loadSearchHistory === "function"
+    ) {
+
+        loadSearchHistory();
+
+    }
+
+
+    // ========================================================
+    // CURRENT TEMPERATURE
+    // ========================================================
+
+    temperature.textContent =
+        data.current.temp_c + "°C";
+
+
+    // ========================================================
+    // FEELS LIKE
+    // ========================================================
+
+    const feels =
+        data.current.feelslike_c;
+
+
+    feelsLike.textContent =
+        feels + "°C";
+
+
+    if (feels >= 35) {
+
         feelsLike.style.color = "red";
+
     }
-    else if (feels <= 10)
-    {
+
+    else if (feels <= 10) {
+
         feelsLike.style.color = "deepskyblue";
+
     }
-    else
-    {
+
+    else {
+
         feelsLike.style.color = "";
+
     }
 
-    // Weather Condition
-    condition.textContent = data.current.condition.text;
 
-    humidity.textContent = data.current.humidity + "%";
+    // ========================================================
+    // WEATHER CONDITION
+    // ========================================================
 
-    wind.textContent = data.current.wind_kph + " km/h";
+    condition.textContent =
+        data.current.condition.text;
 
-    pressure.textContent = data.current.pressure_mb + " hPa";
 
-    // Sunrise & Sunset
+    // ========================================================
+    // HUMIDITY
+    // ========================================================
+
+    humidity.textContent =
+        data.current.humidity + "%";
+
+
+    // ========================================================
+    // WIND
+    // ========================================================
+
+    wind.textContent =
+        data.current.wind_kph + " km/h";
+
+
+    // ========================================================
+    // PRESSURE
+    // ========================================================
+
+    pressure.textContent =
+        data.current.pressure_mb + " hPa";
+
+
+    // ========================================================
+    // SUNRISE
+    // ========================================================
+
     sunrise.textContent =
-        data.forecast.forecastday[0].astro.sunrise;
+        data.forecast.forecastday[0]
+            .astro.sunrise;
+
+
+    // ========================================================
+    // SUNSET
+    // ========================================================
 
     sunset.textContent =
-        data.forecast.forecastday[0].astro.sunset;
+        data.forecast.forecastday[0]
+            .astro.sunset;
 
-    // ===============================
-    // Moon Information
-    // ===============================
+
+
+    // ========================================================
+    // MOON INFORMATION
+    // ========================================================
 
     const phase =
-        data.forecast.forecastday[0].astro.moon_phase;
+        data.forecast.forecastday[0]
+            .astro.moon_phase;
+
 
     let moonIcon = "🌙";
 
-    switch (phase)
-    {
+
+    switch (phase) {
+
         case "New Moon":
+
             moonIcon = "🌑";
+
             break;
+
 
         case "Waxing Crescent":
+
             moonIcon = "🌒";
+
             break;
+
 
         case "First Quarter":
+
             moonIcon = "🌓";
+
             break;
+
 
         case "Waxing Gibbous":
+
             moonIcon = "🌔";
+
             break;
+
 
         case "Full Moon":
+
             moonIcon = "🌕";
+
             break;
+
 
         case "Waning Gibbous":
+
             moonIcon = "🌖";
+
             break;
+
 
         case "Last Quarter":
+
             moonIcon = "🌗";
+
             break;
+
 
         case "Waning Crescent":
+
             moonIcon = "🌘";
+
             break;
 
+
         default:
+
             moonIcon = "🌙";
+
     }
 
-    moonPhase.textContent = `${moonIcon} ${phase}`;
+
+    moonPhase.textContent =
+        `${moonIcon} ${phase}`;
+
+
+    // ========================================================
+    // MOONRISE
+    // ========================================================
 
     moonrise.textContent =
-        data.forecast.forecastday[0].astro.moonrise;
+        data.forecast.forecastday[0]
+            .astro.moonrise;
+
+
+    // ========================================================
+    // MOONSET
+    // ========================================================
 
     moonset.textContent =
-        data.forecast.forecastday[0].astro.moonset;
+        data.forecast.forecastday[0]
+            .astro.moonset;
+
+
+    // ========================================================
+    // MOON ILLUMINATION
+    // ========================================================
 
     moonIllumination.textContent =
-        data.forecast.forecastday[0].astro.moon_illumination + "%";
+        data.forecast.forecastday[0]
+            .astro.moon_illumination + "%";
 
-    // ===============================
-    // UV Index
-    // ===============================
 
-    uv.textContent = data.current.uv;
 
-    // ===============================
-    // Air Quality Index
-    // ===============================
+    // ========================================================
+    // UV INDEX
+    // ========================================================
 
-    const airQuality =
-        data.current.air_quality["us-epa-index"];
+    uv.textContent =
+        data.current.uv;
 
-    let airQualityText = "";
 
-    switch (airQuality)
-    {
-        case 1:
-            airQualityText = "Good";
-            break;
 
-        case 2:
-            airQualityText = "Moderate";
-            break;
+    // ========================================================
+    // AIR QUALITY
+    // ========================================================
 
-        case 3:
-            airQualityText = "Unhealthy for Sensitive Groups";
-            break;
+    if (
+        data.current.air_quality
+    ) {
 
-        case 4:
-            airQualityText = "Unhealthy";
-            break;
+        const airQuality =
+            data.current.air_quality[
+                "us-epa-index"
+            ];
 
-        case 5:
-            airQualityText = "Very Unhealthy";
-            break;
 
-        case 6:
-            airQualityText = "Hazardous";
-            break;
+        let airQualityText = "";
 
-        default:
-            airQualityText = "Unknown";
+
+        switch (airQuality) {
+
+            case 1:
+
+                airQualityText = "Good";
+
+                break;
+
+
+            case 2:
+
+                airQualityText = "Moderate";
+
+                break;
+
+
+            case 3:
+
+                airQualityText =
+                    "Unhealthy for Sensitive Groups";
+
+                break;
+
+
+            case 4:
+
+                airQualityText =
+                    "Unhealthy";
+
+                break;
+
+
+            case 5:
+
+                airQualityText =
+                    "Very Unhealthy";
+
+                break;
+
+
+            case 6:
+
+                airQualityText =
+                    "Hazardous";
+
+                break;
+
+
+            default:
+
+                airQualityText =
+                    "Unknown";
+
+        }
+
+
+        aqi.textContent =
+            `${airQuality} (${airQualityText})`;
+
     }
 
-    aqi.textContent = `${airQuality} (${airQualityText})`;
+    else {
 
-    // Weather Icon
-    weatherIcon.src =
-        "https:" + data.current.condition.icon;
+        aqi.textContent =
+            "Unavailable";
+
+    }
+
+
+
+    // ========================================================
+    // WEATHER ICON
+    // ========================================================
+
+    if (
+        data.current.condition &&
+        data.current.condition.icon
+    ) {
+
+        weatherIcon.src =
+            "https:" +
+            data.current.condition.icon;
+
+
+        weatherIcon.alt =
+            data.current.condition.text;
+
+    }
+
+
+    // ========================================================
+    // TODAY'S HIGHLIGHTS
+    // ========================================================
+
+    updateHighlights(data);
+
+}
+
+
+
+// ============================================================
+// UPDATE TODAY'S HIGHLIGHTS
+// ============================================================
+
+function updateHighlights(data) {
+
+    const highlightCards =
+        document.querySelectorAll(
+            ".highlights .card"
+        );
+
+
+    if (
+        !highlightCards ||
+        highlightCards.length < 4
+    ) {
+
+        return;
+
+    }
+
+
+    // --------------------------------------------------------
+    // AIR QUALITY
+    // --------------------------------------------------------
+
+    let airQualityText =
+        "Good";
+
+
+    if (
+        data.current.air_quality
+    ) {
+
+        const aqiValue =
+            data.current.air_quality[
+                "us-epa-index"
+            ];
+
+
+        switch (aqiValue) {
+
+            case 1:
+
+                airQualityText =
+                    "Good";
+
+                break;
+
+
+            case 2:
+
+                airQualityText =
+                    "Moderate";
+
+                break;
+
+
+            case 3:
+
+                airQualityText =
+                    "Unhealthy for Sensitive Groups";
+
+                break;
+
+
+            case 4:
+
+                airQualityText =
+                    "Unhealthy";
+
+                break;
+
+
+            case 5:
+
+                airQualityText =
+                    "Very Unhealthy";
+
+                break;
+
+
+            case 6:
+
+                airQualityText =
+                    "Hazardous";
+
+                break;
+
+        }
+
+    }
+
+
+    highlightCards[0]
+        .querySelector("p")
+        .textContent =
+        airQualityText;
+
+
+
+    // --------------------------------------------------------
+    // CHANCE OF RAIN
+    // --------------------------------------------------------
+
+    const rainChance =
+        data.forecast.forecastday[0]
+            .day.daily_chance_of_rain;
+
+
+    highlightCards[1]
+        .querySelector("p")
+        .textContent =
+        rainChance + "%";
+
+
+
+    // --------------------------------------------------------
+    // VISIBILITY
+    // --------------------------------------------------------
+
+    const visibility =
+        data.current.vis_km;
+
+
+    highlightCards[2]
+        .querySelector("p")
+        .textContent =
+        visibility + " km";
+
+
+
+    // --------------------------------------------------------
+    // FEELS LIKE
+    // --------------------------------------------------------
+
+    highlightCards[3]
+        .querySelector("p")
+        .textContent =
+        data.current.feelslike_c + "°C";
+
+}
+
+
+
+// ============================================================
+// CAPITALIZE CITY NAME
+// ============================================================
+
+function capitalize(text) {
+
+    if (!text) {
+
+        return "";
+
+    }
+
+
+    return (
+        text.charAt(0).toUpperCase() +
+        text.slice(1)
+    );
+
 }
