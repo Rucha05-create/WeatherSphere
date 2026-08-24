@@ -1,5 +1,6 @@
 // ============================================================
 // FORECAST.JS
+// WeatherSphere
 // ============================================================
 
 
@@ -9,25 +10,77 @@
 
 function updateHourlyForecast(data) {
 
-    // Get the container
     const hourContainer =
         document.getElementById("hourContainer");
-
 
     // Safety check
     if (!hourContainer) {
 
-        console.error(
-            "hourContainer not found!"
-        );
+        console.error("❌ hourContainer not found!");
 
         return;
-
     }
-
 
     // Clear previous forecast
     hourContainer.innerHTML = "";
+
+    // Safety check for API data
+    if (
+        !data ||
+        !data.forecast ||
+        !data.forecast.forecastday ||
+        data.forecast.forecastday.length === 0
+    ) {
+
+        hourContainer.innerHTML = `
+            <p class="no-data">
+                No hourly forecast available.
+            </p>
+        `;
+
+        return;
+    }
+
+
+    // ========================================================
+    // GET CURRENT TIME FROM WEATHER API LOCATION
+    // ========================================================
+
+    let currentHour = 0;
+
+    try {
+
+        /*
+         * WeatherAPI localtime format:
+         * 2026-08-24 19:30
+         */
+
+        const localTime =
+            data.location.localtime;
+
+        if (localTime) {
+
+            const timePart =
+                localTime.split(" ")[1];
+
+            currentHour =
+                parseInt(
+                    timePart.split(":")[0]
+                );
+
+        }
+
+    }
+    catch (error) {
+
+        console.warn(
+            "Could not determine local hour. Using current system hour."
+        );
+
+        currentHour =
+            new Date().getHours();
+
+    }
 
 
     // ========================================================
@@ -38,53 +91,85 @@ function updateHourlyForecast(data) {
         data.forecast.forecastday[0];
 
 
-    const currentHour =
-        new Date().getHours();
+    let hours = [];
 
 
-    /*
-     * WeatherAPI gives 24 hours starting from 00:00.
-     * We display the current hour and upcoming hours.
-     */
+    if (today.hour) {
 
-    let hours =
-        today.hour.filter(hour => {
+        hours =
+            today.hour.filter(hour => {
 
-            const hourTime =
-                new Date(hour.time).getHours();
+                const hourTime =
+                    parseInt(
+                        hour.time.split(" ")[1].split(":")[0]
+                    );
 
-            return hourTime >= currentHour;
+                return hourTime >= currentHour;
 
-        });
-
-
-    // If there are not enough hours left today,
-    // get remaining hours from tomorrow
-    if (hours.length < 12 && data.forecast.forecastday[1]) {
-
-        const tomorrow =
-            data.forecast.forecastday[1];
-
-
-        hours = [
-            ...hours,
-            ...tomorrow.hour
-        ];
+            });
 
     }
 
 
-    // Display maximum 24 hours
+    // ========================================================
+    // GET TOMORROW'S HOURS IF REQUIRED
+    // ========================================================
+
+    if (
+        hours.length < 24 &&
+        data.forecast.forecastday.length > 1
+    ) {
+
+        const tomorrow =
+            data.forecast.forecastday[1];
+
+        if (tomorrow.hour) {
+
+            hours = [
+                ...hours,
+                ...tomorrow.hour
+            ];
+
+        }
+
+    }
+
+
+    // ========================================================
+    // LIMIT TO 24 HOURS
+    // ========================================================
+
     hours =
         hours.slice(0, 24);
 
 
+    // ========================================================
+    // DISPLAY NO DATA MESSAGE
+    // ========================================================
+
+    if (hours.length === 0) {
+
+        hourContainer.innerHTML = `
+
+            <div class="no-data">
+
+                <p>
+                    No hourly forecast available.
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
 
     // ========================================================
-    // CREATE HOURLY CARDS
+    // CREATE HOURLY FORECAST CARDS
     // ========================================================
 
-    hours.forEach(hour => {
+    hours.forEach((hour, index) => {
 
         const card =
             document.createElement("div");
@@ -94,12 +179,70 @@ function updateHourlyForecast(data) {
             "hourCard";
 
 
-        // ----------------------------------------------------
-        // Rain Chance
-        // ----------------------------------------------------
+        // ====================================================
+        // TIME
+        // ====================================================
+
+        let timeText =
+            formatHour(hour.time);
+
+
+        // Show "Now" for first/current card
+        if (index === 0) {
+
+            timeText = "Now";
+
+        }
+
+
+        // ====================================================
+        // TEMPERATURE
+        // ====================================================
+
+        const temperature =
+            hour.temp_c !== undefined
+                ? hour.temp_c
+                : "--";
+
+
+        // ====================================================
+        // WEATHER CONDITION
+        // ====================================================
+
+        const condition =
+            hour.condition &&
+            hour.condition.text
+                ? hour.condition.text
+                : "Unknown";
+
+
+        // ====================================================
+        // WEATHER ICON
+        // ====================================================
+
+        let icon = "";
+
+        if (
+            hour.condition &&
+            hour.condition.icon
+        ) {
+
+            icon =
+                hour.condition.icon.startsWith("http")
+                    ? hour.condition.icon
+                    : "https:" + hour.condition.icon;
+
+        }
+
+
+        // ====================================================
+        // RAIN CHANCE
+        // ====================================================
 
         const rainChance =
-            hour.chance_of_rain || 0;
+            hour.chance_of_rain !== undefined
+                ? hour.chance_of_rain
+                : 0;
 
 
         // High rain class
@@ -109,74 +252,71 @@ function updateHourlyForecast(data) {
                 : "";
 
 
-        // ----------------------------------------------------
-        // Weather Icon
-        // ----------------------------------------------------
-
-        const icon =
-            "https:" +
-            hour.condition.icon;
+        // Rain icon
+        const rainIcon =
+            rainChance >= 60
+                ? "☔"
+                : "🌧";
 
 
-        // ----------------------------------------------------
-        // Format Time
-        // ----------------------------------------------------
-
-        const time =
-            formatHour(hour.time);
-
-
-        // ----------------------------------------------------
-        // Card HTML
-        // ----------------------------------------------------
+        // ====================================================
+        // CREATE CARD
+        // ====================================================
 
         card.innerHTML = `
 
             <h3>
-                ${time}
+                ${timeText}
             </h3>
 
-            <img
-                src="${icon}"
-                alt="${hour.condition.text}"
-            >
+            ${
+                icon
+                    ? `
+                        <img
+                            src="${icon}"
+                            alt="${condition}"
+                            loading="lazy"
+                        >
+                    `
+                    : `
+                        <div
+                            style="
+                                font-size:40px;
+                                margin:15px 0;
+                            "
+                        >
+                            🌤
+                        </div>
+                    `
+            }
 
             <p class="temp">
-                ${hour.temp_c}°C
+                ${temperature}°C
             </p>
 
             <small>
-                ${hour.condition.text}
+                ${condition}
             </small>
 
             <p class="rain ${rainClass}">
-                🌧 ${rainChance}% Chance of Rain
+                ${rainIcon}
+                ${rainChance}% Chance of Rain
             </p>
 
         `;
 
 
-        // Add card
+        // Add card to container
         hourContainer.appendChild(card);
 
     });
 
 
-    // ========================================================
-    // NO DATA MESSAGE
-    // ========================================================
-
-    if (hours.length === 0) {
-
-        hourContainer.innerHTML = `
-
-            <p class="no-data">
-                No hourly forecast available.
-            </p>
-
-        `;
-
-    }
+    console.log(
+        "✅ Hourly forecast loaded:",
+        hours.length,
+        "hours"
+    );
 
 }
 
@@ -188,7 +328,6 @@ function updateHourlyForecast(data) {
 
 function updateWeeklyForecast(data) {
 
-    // Get table body
     const weeklyForecast =
         document.getElementById(
             "weeklyForecast"
@@ -199,20 +338,48 @@ function updateWeeklyForecast(data) {
     if (!weeklyForecast) {
 
         console.error(
-            "weeklyForecast element not found!"
+            "❌ weeklyForecast element not found!"
         );
 
         return;
-
     }
 
 
-    // Clear old data
+    // Clear previous forecast
     weeklyForecast.innerHTML = "";
 
 
     // ========================================================
-    // LOOP THROUGH 7 DAYS
+    // CHECK API DATA
+    // ========================================================
+
+    if (
+        !data ||
+        !data.forecast ||
+        !data.forecast.forecastday ||
+        data.forecast.forecastday.length === 0
+    ) {
+
+        weeklyForecast.innerHTML = `
+
+            <tr>
+
+                <td colspan="3">
+
+                    No weekly forecast available.
+
+                </td>
+
+            </tr>
+
+        `;
+
+        return;
+    }
+
+
+    // ========================================================
+    // LOOP THROUGH FORECAST DAYS
     // ========================================================
 
     data.forecast.forecastday.forEach(
@@ -223,9 +390,9 @@ function updateWeeklyForecast(data) {
                 document.createElement("tr");
 
 
-            // ------------------------------------------------
-            // Day Name
-            // ------------------------------------------------
+            // =================================================
+            // DAY NAME
+            // =================================================
 
             let weekday;
 
@@ -244,50 +411,90 @@ function updateWeeklyForecast(data) {
             }
 
 
-            // ------------------------------------------------
-            // Weather Icon
-            // ------------------------------------------------
+            // =================================================
+            // DATE
+            // =================================================
 
-            const icon =
-                "https:" +
-                day.day.condition.icon;
+            const formattedDate =
+                formatDate(day.date);
 
 
-            // ------------------------------------------------
-            // Temperature
-            // ------------------------------------------------
+            // =================================================
+            // WEATHER ICON
+            // =================================================
+
+            let icon = "";
+
+            if (
+                day.day &&
+                day.day.condition &&
+                day.day.condition.icon
+            ) {
+
+                icon =
+                    day.day.condition.icon.startsWith("http")
+                        ? day.day.condition.icon
+                        : "https:" +
+                          day.day.condition.icon;
+
+            }
+
+
+            // =================================================
+            // WEATHER CONDITION
+            // =================================================
+
+            const condition =
+                day.day &&
+                day.day.condition
+                    ? day.day.condition.text
+                    : "Unknown";
+
+
+            // =================================================
+            // TEMPERATURE
+            // =================================================
 
             const avgTemp =
-                day.day.avgtemp_c;
+                day.day &&
+                day.day.avgtemp_c !== undefined
+                    ? day.day.avgtemp_c
+                    : "--";
 
-
-            // ------------------------------------------------
-            // Min / Max Temperature
-            // ------------------------------------------------
 
             const minTemp =
-                day.day.mintemp_c;
+                day.day &&
+                day.day.mintemp_c !== undefined
+                    ? day.day.mintemp_c
+                    : "--";
 
 
             const maxTemp =
-                day.day.maxtemp_c;
+                day.day &&
+                day.day.maxtemp_c !== undefined
+                    ? day.day.maxtemp_c
+                    : "--";
 
 
-            // ------------------------------------------------
-            // Rain Chance
-            // ------------------------------------------------
+            // =================================================
+            // RAIN CHANCE
+            // =================================================
 
             const rainChance =
-                day.day.daily_chance_of_rain || 0;
+                day.day &&
+                day.day.daily_chance_of_rain !== undefined
+                    ? day.day.daily_chance_of_rain
+                    : 0;
 
 
-            // ------------------------------------------------
-            // Create Table Row
-            // ------------------------------------------------
+            // =================================================
+            // CREATE TABLE ROW
+            // =================================================
 
             row.innerHTML = `
 
                 <td>
+
                     <strong>
                         ${weekday}
                     </strong>
@@ -295,24 +502,40 @@ function updateWeeklyForecast(data) {
                     <br>
 
                     <small>
-                        ${day.date}
+                        ${formattedDate}
                     </small>
+
                 </td>
 
 
                 <td>
 
-                    <img
-                        src="${icon}"
-                        alt="${day.day.condition.text}"
-                        style="
-                            width:45px;
-                            vertical-align:middle;
-                            margin-right:10px;
-                        "
-                    >
+                    ${
+                        icon
+                            ? `
+                                <img
+                                    src="${icon}"
+                                    alt="${condition}"
+                                    style="
+                                        width:45px;
+                                        vertical-align:middle;
+                                        margin-right:10px;
+                                    "
+                                >
+                            `
+                            : `
+                                <span
+                                    style="
+                                        font-size:30px;
+                                        margin-right:10px;
+                                    "
+                                >
+                                    🌤
+                                </span>
+                            `
+                    }
 
-                    ${day.day.condition.text}
+                    ${condition}
 
                     <br>
 
@@ -348,29 +571,11 @@ function updateWeeklyForecast(data) {
     );
 
 
-    // ========================================================
-    // NO DATA MESSAGE
-    // ========================================================
-
-    if (
-        data.forecast.forecastday.length === 0
-    ) {
-
-        weeklyForecast.innerHTML = `
-
-            <tr>
-
-                <td colspan="3">
-
-                    No weekly forecast available.
-
-                </td>
-
-            </tr>
-
-        `;
-
-    }
+    console.log(
+        "✅ Weekly forecast loaded:",
+        data.forecast.forecastday.length,
+        "days"
+    );
 
 }
 
@@ -382,35 +587,66 @@ function updateWeeklyForecast(data) {
 
 function formatHour(time) {
 
-    const date =
-        new Date(time);
+    if (!time) {
+
+        return "--";
+
+    }
 
 
-    let hours =
-        date.getHours();
+    try {
+
+        /*
+         * WeatherAPI format:
+         * 2026-08-24 19:30
+         */
+
+        const timePart =
+            time.includes(" ")
+                ? time.split(" ")[1]
+                : time;
 
 
-    const minutes =
-        String(
-            date.getMinutes()
-        ).padStart(2, "0");
+        let parts =
+            timePart.split(":");
 
 
-    const ampm =
-        hours >= 12
-            ? "PM"
-            : "AM";
+        let hours =
+            parseInt(parts[0]);
 
 
-    hours =
-        hours % 12;
+        const minutes =
+            parts[1] || "00";
 
 
-    hours =
-        hours || 12;
+        const ampm =
+            hours >= 12
+                ? "PM"
+                : "AM";
 
 
-    return `${hours}:${minutes} ${ampm}`;
+        hours =
+            hours % 12;
+
+
+        hours =
+            hours || 12;
+
+
+        return `${hours}:${minutes} ${ampm}`;
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Error formatting hour:",
+            error
+        );
+
+        return time;
+
+    }
 
 }
 
@@ -422,17 +658,86 @@ function formatHour(time) {
 
 function getWeekday(dateString) {
 
-    const date =
-        new Date(
-            dateString + "T00:00:00"
+    if (!dateString) {
+
+        return "--";
+
+    }
+
+
+    try {
+
+        /*
+         * Use local date string without timezone
+         * to avoid date shifting.
+         */
+
+        const date =
+            new Date(
+                dateString + "T00:00:00"
+            );
+
+
+        return date.toLocaleDateString(
+            "en-US",
+            {
+                weekday: "long"
+            }
         );
 
+    }
 
-    return date.toLocaleDateString(
-        "en-US",
-        {
-            weekday: "long"
-        }
-    );
+    catch (error) {
+
+        console.error(
+            "Error getting weekday:",
+            error
+        );
+
+        return dateString;
+
+    }
+
+}
+
+
+
+// ============================================================
+// FORMAT DATE
+// ============================================================
+
+function formatDate(dateString) {
+
+    if (!dateString) {
+
+        return "--";
+
+    }
+
+
+    try {
+
+        const date =
+            new Date(
+                dateString + "T00:00:00"
+            );
+
+
+        return date.toLocaleDateString(
+            "en-US",
+            {
+                day: "2-digit",
+                month: "short",
+                year: "numeric"
+            }
+        );
+
+    }
+
+    catch (error) {
+
+        return dateString;
+
+    }
 
 }

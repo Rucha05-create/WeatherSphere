@@ -1,4 +1,26 @@
+// ============================================================
+// APP.JS
+// ============================================================
+
 document.addEventListener("DOMContentLoaded", () => {
+
+    console.log("WeatherSphere application started.");
+
+
+    // =========================================================
+    // CHECK IMPORTANT DOM ELEMENTS
+    // =========================================================
+
+    if (!cityInput) {
+        console.error("cityInput not found.");
+        return;
+    }
+
+    if (!searchBtn) {
+        console.error("searchBtn not found.");
+        return;
+    }
+
 
     // =========================================================
     // SEARCH WEATHER
@@ -8,9 +30,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const city = cityInput.value.trim();
 
-        if (city) {
-            getWeather(city);
+        if (city === "") {
+
+            alert("Please enter a city name.");
+
+            cityInput.focus();
+
+            return;
         }
+
+        getWeather(city);
 
     });
 
@@ -19,15 +48,22 @@ document.addEventListener("DOMContentLoaded", () => {
     // SEARCH USING ENTER KEY
     // =========================================================
 
-    cityInput.addEventListener("keypress", (e) => {
+    cityInput.addEventListener("keypress", (event) => {
 
-        if (e.key === "Enter") {
+        if (event.key === "Enter") {
+
+            event.preventDefault();
 
             const city = cityInput.value.trim();
 
-            if (city) {
-                getWeather(city);
+            if (city === "") {
+
+                alert("Please enter a city name.");
+
+                return;
             }
+
+            getWeather(city);
 
         }
 
@@ -46,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         locationBtn.addEventListener("click", () => {
 
+            // Check browser support
             if (!navigator.geolocation) {
 
                 alert(
@@ -56,28 +93,98 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
+            // Change button text while locating
+            const originalText =
+                locationBtn.innerHTML;
+
+            locationBtn.innerHTML =
+                '<i class="fa-solid fa-spinner fa-spin"></i> Getting Location...';
+
+            locationBtn.disabled = true;
+
+
             navigator.geolocation.getCurrentPosition(
+
+                // =================================================
+                // SUCCESS
+                // =================================================
 
                 (position) => {
 
-                    const lat =
+                    const latitude =
                         position.coords.latitude;
 
-                    const lon =
+                    const longitude =
                         position.coords.longitude;
 
 
-                    getWeather(
-                        `${lat},${lon}`
+                    console.log(
+                        "Current Location:",
+                        latitude,
+                        longitude
                     );
+
+
+                    getWeather(
+                        `${latitude},${longitude}`
+                    );
+
+
+                    // Restore button
+                    locationBtn.innerHTML =
+                        originalText;
+
+                    locationBtn.disabled = false;
 
                 },
 
-                () => {
 
-                    alert(
-                        "Unable to get your current location."
+                // =================================================
+                // ERROR
+                // =================================================
+
+                (error) => {
+
+                    console.error(
+                        "Geolocation Error:",
+                        error
                     );
+
+
+                    let message =
+                        "Unable to get your current location.";
+
+
+                    if (error.code === 1) {
+
+                        message =
+                            "Location permission was denied. Please allow location access.";
+
+                    }
+
+                    else if (error.code === 2) {
+
+                        message =
+                            "Your location could not be determined.";
+
+                    }
+
+                    else if (error.code === 3) {
+
+                        message =
+                            "Location request timed out.";
+
+                    }
+
+
+                    alert(message);
+
+
+                    // Restore button
+                    locationBtn.innerHTML =
+                        originalText;
+
+                    locationBtn.disabled = false;
 
                 }
 
@@ -92,64 +199,177 @@ document.addEventListener("DOMContentLoaded", () => {
     // ADD TO FAVORITES
     // =========================================================
 
-    favBtn.addEventListener("click", () => {
+    if (favBtn) {
 
-        if (
-            !cityName.textContent ||
-            cityName.textContent === "--"
-        ) {
+        favBtn.addEventListener("click", () => {
 
-            alert(
-                "Please search for a city first."
-            );
-
-            return;
-        }
+            const city =
+                cityName
+                    ? cityName.textContent.trim()
+                    : "";
 
 
-        saveFavorite(
-            cityName.textContent,
-            countryName.textContent
-        );
+            const country =
+                countryName
+                    ? countryName.textContent.trim()
+                    : "";
 
-    });
+
+            // Don't allow default/empty values
+            if (
+                city === "" ||
+                city === "--" ||
+                city === "Pune"
+            ) {
+
+                alert(
+                    "Please search for a city first."
+                );
+
+                return;
+            }
+
+
+            // Check whether favourites function exists
+            if (
+                typeof saveFavorite === "function"
+            ) {
+
+                saveFavorite(
+                    city,
+                    country
+                );
+
+            }
+
+            else {
+
+                console.error(
+                    "saveFavorite() function not found."
+                );
+
+            }
+
+        });
+
+    }
 
 
     // =========================================================
     // LOAD FAVORITES
     // =========================================================
 
-    if (typeof loadFavorites === "function") {
+    if (
+        typeof loadFavorites === "function"
+    ) {
 
         loadFavorites();
 
     }
 
+    else {
+
+        console.warn(
+            "loadFavorites() function not found."
+        );
+
+    }
+
 
     // =========================================================
-    // INITIAL DEMO FORECAST
+    // LOAD SEARCH HISTORY
+    // =========================================================
+
+    if (
+        typeof loadSearchHistory === "function"
+    ) {
+
+        loadSearchHistory();
+
+    }
+
+
+    // =========================================================
+    // CLEAR SEARCH HISTORY
+    // =========================================================
+
+    if (clearHistoryBtn) {
+
+        clearHistoryBtn.addEventListener(
+            "click",
+            () => {
+
+                if (
+                    typeof clearSearchHistory ===
+                    "function"
+                ) {
+
+                    clearSearchHistory();
+
+                }
+
+                else {
+
+                    // Fallback
+                    localStorage.removeItem(
+                        "weatherSearchHistory"
+                    );
+
+                    if (historyContainer) {
+
+                        historyContainer.innerHTML =
+                            "";
+
+                    }
+
+                }
+
+            }
+        );
+
+    }
+
+
+    // =========================================================
+    // INITIAL WEATHER
     // =========================================================
 
     /*
-     * This prevents the forecast section from appearing blank
-     * before the API returns data.
+     * Load Pune automatically when the website opens.
+     *
+     * This is important because otherwise:
+     *
+     * - Hourly forecast is empty
+     * - Weekly forecast is empty
+     * - Weather map is empty
+     * - Temperature chart is empty
+     *
+     * until the user searches for a city.
      */
 
-    if (
-        typeof showDemoHourlyForecast === "function"
-    ) {
+    setTimeout(() => {
 
-        showDemoHourlyForecast();
+        if (
+            typeof getWeather === "function"
+        ) {
 
-    }
+            console.log(
+                "Loading default weather: Pune"
+            );
 
+            getWeather("Pune");
 
-    if (
-        typeof showDemoWeeklyForecast === "function"
-    ) {
+        }
 
-        showDemoWeeklyForecast();
+        else {
 
-    }
+            console.error(
+                "getWeather() function not found."
+            );
+
+        }
+
+    }, 300);
+
 
 });

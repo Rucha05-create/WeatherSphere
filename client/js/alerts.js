@@ -1,51 +1,305 @@
-function updateWeatherAlerts(data)
-{
+// ============================================================
+// ALERTS.JS
+// Weather Alerts Management
+// ============================================================
 
-    alertsContainer.innerHTML = "";
 
-    const alerts = data.alerts.alert;
+// ============================================================
+// UPDATE WEATHER ALERTS
+// ============================================================
 
-    if(alerts.length === 0)
-    {
+function updateWeatherAlerts(data) {
 
-        alertsContainer.innerHTML = `
-            <div class="alertCard safe">
+    // --------------------------------------------------------
+    // Get alerts container
+    // --------------------------------------------------------
 
-                <h3>✅ No Weather Alerts</h3>
+    const container =
+        document.getElementById("alertsContainer");
 
-                <p>No warnings for this location.</p>
 
-            </div>
-        `;
+    // --------------------------------------------------------
+    // Safety check
+    // --------------------------------------------------------
+
+    if (!container) {
+
+        console.error(
+            "alertsContainer element not found!"
+        );
 
         return;
 
     }
 
-    alerts.forEach(alert=>{
 
-        const card=document.createElement("div");
+    // --------------------------------------------------------
+    // Clear previous alerts
+    // --------------------------------------------------------
 
-        card.className="alertCard danger";
+    container.innerHTML = "";
 
-        card.innerHTML=`
 
-            <h3>${alert.headline}</h3>
+    // --------------------------------------------------------
+    // Check whether alert data exists
+    // --------------------------------------------------------
 
-            <p>${alert.desc}</p>
+    if (
+        !data ||
+        !data.alerts ||
+        !Array.isArray(data.alerts.alert)
+    ) {
 
-            <small>
+        showNoAlerts(container);
 
-                Effective:
+        return;
 
-                ${alert.effective}
+    }
 
-            </small>
+
+    // --------------------------------------------------------
+    // Get alerts
+    // --------------------------------------------------------
+
+    const alerts =
+        data.alerts.alert;
+
+
+    // --------------------------------------------------------
+    // No alerts
+    // --------------------------------------------------------
+
+    if (alerts.length === 0) {
+
+        showNoAlerts(container);
+
+        return;
+
+    }
+
+
+    // ========================================================
+    // DISPLAY EACH ALERT
+    // ========================================================
+
+    alerts.forEach((alert) => {
+
+        const card =
+            document.createElement("div");
+
+
+        card.className =
+            "alertCard danger";
+
+
+        // ----------------------------------------------------
+        // Alert information
+        // ----------------------------------------------------
+
+        const headline =
+            alert.headline ||
+            "Weather Alert";
+
+
+        const description =
+            alert.desc ||
+            "Weather warning information is available.";
+
+
+        const effective =
+            alert.effective ||
+            "Not available";
+
+
+        const expires =
+            alert.expires ||
+            "Not available";
+
+
+        const severity =
+            alert.severity ||
+            "Unknown";
+
+
+        const urgency =
+            alert.urgency ||
+            "Unknown";
+
+
+        const areas =
+            alert.areas ||
+            "Not specified";
+
+
+        // ----------------------------------------------------
+        // Create alert card
+        // ----------------------------------------------------
+
+        card.innerHTML = `
+
+            <div class="alertHeader">
+
+                <span class="alertIcon">
+                    ⚠️
+                </span>
+
+                <h3>
+                    ${escapeAlertHTML(headline)}
+                </h3>
+
+            </div>
+
+
+            <div class="alertContent">
+
+                <p>
+                    ${escapeAlertHTML(description)}
+                </p>
+
+
+                <div class="alertDetails">
+
+                    <div>
+                        <strong>
+                            Effective:
+                        </strong>
+
+                        <span>
+                            ${escapeAlertHTML(effective)}
+                        </span>
+                    </div>
+
+
+                    <div>
+                        <strong>
+                            Expires:
+                        </strong>
+
+                        <span>
+                            ${escapeAlertHTML(expires)}
+                        </span>
+                    </div>
+
+
+                    <div>
+                        <strong>
+                            Severity:
+                        </strong>
+
+                        <span>
+                            ${escapeAlertHTML(severity)}
+                        </span>
+                    </div>
+
+
+                    <div>
+                        <strong>
+                            Urgency:
+                        </strong>
+
+                        <span>
+                            ${escapeAlertHTML(urgency)}
+                        </span>
+                    </div>
+
+
+                    <div>
+                        <strong>
+                            Area:
+                        </strong>
+
+                        <span>
+                            ${escapeAlertHTML(areas)}
+                        </span>
+                    </div>
+
+                </div>
+
+            </div>
 
         `;
 
-        alertsContainer.appendChild(card);
+
+        // ----------------------------------------------------
+        // Add alert card to page
+        // ----------------------------------------------------
+
+        container.appendChild(card);
 
     });
+
+}
+
+
+
+// ============================================================
+// NO ALERTS MESSAGE
+// ============================================================
+
+function showNoAlerts(container) {
+
+    container.innerHTML = `
+
+        <div class="alertCard safe">
+
+            <div class="alertHeader">
+
+                <span class="alertIcon">
+                    ✅
+                </span>
+
+                <h3>
+                    No Weather Alerts
+                </h3>
+
+            </div>
+
+
+            <div class="alertContent">
+
+                <p>
+                    No weather warnings are currently
+                    available for this location.
+                </p>
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+
+// ============================================================
+// ESCAPE HTML
+// ============================================================
+
+/*
+ * Prevents weather alert text coming from the API
+ * from being interpreted as HTML.
+ */
+
+function escapeAlertHTML(value) {
+
+    if (value === null || value === undefined) {
+
+        return "";
+
+    }
+
+
+    return String(value)
+
+        .replace(/&/g, "&amp;")
+
+        .replace(/</g, "&lt;")
+
+        .replace(/>/g, "&gt;")
+
+        .replace(/"/g, "&quot;")
+
+        .replace(/'/g, "&#039;");
 
 }

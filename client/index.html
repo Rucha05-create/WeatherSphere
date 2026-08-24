@@ -1,27 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WeatherSphere</title>
 
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>WeatherSphere | Global Weather Forecast</title>
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="style.css">
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <!-- =====================================================
+         GOOGLE FONT
+    ====================================================== -->
 
     <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
-    />
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+
+    <!-- =====================================================
+         MAIN CSS
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+
+    <!-- =====================================================
+         LEAFLET CSS
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet/dist/leaflet.css"
+    >
+
+
+    <!-- =====================================================
+         FONT AWESOME
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
 </head>
+
 
 <body>
 
-    <!-- ================= NAVBAR ================= -->
+
+    <!-- =====================================================
+         NAVBAR
+    ====================================================== -->
 
     <nav>
 
@@ -29,30 +65,61 @@
             🌤 WeatherSphere
         </div>
 
+
         <ul>
 
-          <li><a href="#home">Home</a></li>
+            <li>
+                <a href="#home">
+                    Home
+                </a>
+            </li>
 
-          <li><a href="#forecast">Forecast</a></li>
+            <li>
+                <a href="#forecast">
+                    Forecast
+                </a>
+            </li>
 
-          <li><a href="#favorites">Favorites</a></li>
+            <li>
+                <a href="#favorites">
+                    Favorites
+                </a>
+            </li>
 
-          <li><a href="#about">About</a></li>
+            <li>
+                <a href="#about">
+                    About
+                </a>
+            </li>
 
         </ul>
 
-        <button id="themeBtn">
-            
+
+        <button
+            id="themeBtn"
+            type="button"
+            title="Toggle Theme"
+        >
             🌙
         </button>
 
     </nav>
 
-    <!-- ================= HERO ================= -->
 
-    <header class="hero" id="home">
 
-        <h1>Global Weather Forecast</h1>
+    <!-- =====================================================
+         HERO / SEARCH
+    ====================================================== -->
+
+    <header
+        class="hero"
+        id="home"
+    >
+
+        <h1>
+            Global Weather Forecast
+        </h1>
+
 
         <p>
             Search any city in the world and get
@@ -60,284 +127,761 @@
             weekly forecast and much more.
         </p>
 
-        <!-- Search -->
+
+
+        <!-- ================= SEARCH BOX ================= -->
 
         <div class="search-box">
 
-           <input
+
+            <!-- CITY INPUT -->
+
+            <input
                 type="text"
                 id="cityInput"
                 placeholder="Search any city..."
                 autocomplete="off"
             >
 
-            <div id="suggestions" class="suggestions"></div>
 
-           <button id="searchBtn">
-               <i class="fa-solid fa-magnifying-glass"></i>
-               Search
-           </button>
-           
-           <button id="locationBtn">
-             <i class="fa-solid fa-location-crosshairs"></i>
-              Current Location
-          </button>
+            <!-- AUTOCOMPLETE SUGGESTIONS -->
 
-          <button id="favBtn">
-             ⭐ Add to Favorites
-          </button>
-       </div>
+            <div
+                id="suggestions"
+                class="suggestions"
+            ></div>
+
+
+
+            <!-- SEARCH BUTTON -->
+
+            <button
+                id="searchBtn"
+                type="button"
+            >
+
+                <i class="fa-solid fa-magnifying-glass"></i>
+
+                Search
+
+            </button>
+
+
+
+            <!-- CURRENT LOCATION -->
+
+            <button
+                id="locationBtn"
+                type="button"
+            >
+
+                <i class="fa-solid fa-location-crosshairs"></i>
+
+                Current Location
+
+            </button>
+
+
+
+            <!-- FAVORITE -->
+
+            <button
+                id="favBtn"
+                type="button"
+            >
+
+                ⭐ Add to Favorites
+
+            </button>
+
+        </div>
 
     </header>
 
-    <!-- ============== SEARCH HISTORY =====================-->
+
+
+    <!-- =====================================================
+         SEARCH HISTORY
+    ====================================================== -->
 
     <section class="searchHistory">
 
-      <h2>🕒 Recent Searches</h2>
+        <h2>
+            🕒 Recent Searches
+        </h2>
 
-      <div id="historyContainer"></div>
 
-      <button id="clearHistoryBtn" class="clear-history-btn">
-        
-          🗑 Clear History
-       </button>
+        <div
+            id="historyContainer"
+            class="historyContainer"
+        >
+
+            <p class="empty-message">
+                No recent searches.
+            </p>
+
+        </div>
+
+
+        <button
+            id="clearHistoryBtn"
+            class="clear-history-btn"
+            type="button"
+        >
+
+            🗑 Clear History
+
+        </button>
 
     </section>
 
 
-    <!-- ================= CURRENT WEATHER ================= -->
+
+    <!-- =====================================================
+         CURRENT WEATHER
+    ====================================================== -->
 
     <section class="weatherCard">
 
+
+        <!-- ================= LEFT ================= -->
+
         <div class="left">
 
-            <h2 id="cityName">Pune</h2>
 
-            <h3 id="countryName">India</h3>
+            <h2 id="cityName">
+                Pune
+            </h2>
 
-            <img id="weatherIcon" src="images/sun.png" alt="Weather Icon">
 
-            <h1 id="temperature">31°C</h1>
+            <h3 id="countryName">
+                India
+            </h3>
 
-            <p id="condition">Sunny</p>
+
+            <img
+                id="weatherIcon"
+                src="images/sun.png"
+                alt="Weather Icon"
+            >
+
+
+            <h1 id="temperature">
+                31°C
+            </h1>
+
+
+            <p id="condition">
+                Sunny
+            </p>
 
         </div>
+
+
+
+        <!-- ================= RIGHT ================= -->
 
         <div class="right">
 
+
+            <!-- HUMIDITY -->
+
             <div class="item">
-                💧 Humidity
-                <span id="humidity">72%</span>
+
+                <span>
+                    💧 Humidity
+                </span>
+
+                <span id="humidity">
+                    72%
+                </span>
+
             </div>
 
+
+
+            <!-- WIND -->
+
             <div class="item">
-                💨 Wind
-                <span id="wind">14 km/h</span>
+
+                <span>
+                    💨 Wind
+                </span>
+
+                <span id="wind">
+                    14 km/h
+                </span>
+
             </div>
 
+
+
+            <!-- PRESSURE -->
+
             <div class="item">
-                🌡 Pressure
-                <span id="pressure">1014 hPa</span>
+
+                <span>
+                    🌡 Pressure
+                </span>
+
+                <span id="pressure">
+                    1014 hPa
+                </span>
+
             </div>
 
-            <div class="item">
-                🌡 Feels Like
-               <span id="feelsLike">--</span>
-           </div>
+
+
+            <!-- FEELS LIKE -->
 
             <div class="item">
-                🌅 Sunrise
-                <span id="sunrise">06:02 AM</span>
+
+                <span>
+                    🌡 Feels Like
+                </span>
+
+                <span id="feelsLike">
+                    33°C
+                </span>
+
             </div>
 
+
+
+            <!-- SUNRISE -->
+
             <div class="item">
-                🌇 Sunset
-                <span id="sunset">07:11 PM</span>
+
+                <span>
+                    🌅 Sunrise
+                </span>
+
+                <span id="sunrise">
+                    06:02 AM
+                </span>
+
             </div>
 
+
+
+            <!-- SUNSET -->
+
             <div class="item">
-                ☀ UV Index
-                <span id="uv">7</span>
+
+                <span>
+                    🌇 Sunset
+                </span>
+
+                <span id="sunset">
+                    07:11 PM
+                </span>
+
             </div>
 
-            <div class="item">
-               🌫 Air Quality
-               <span id="aqi">--</span>
-           </div>
+
+
+            <!-- UV -->
 
             <div class="item">
-             🌙 Moon Phase
-             <span id="moonPhase">--</span>
-           </div>
 
-           <div class="item">
-              🌙 Moonrise
-              <span id="moonrise">--</span>
-           </div>
+                <span>
+                    ☀ UV Index
+                </span>
 
-           <div class="item">
-              🌙 Moonset
-              <span id="moonset">--</span>
-           </div>
+                <span id="uv">
+                    7
+                </span>
 
-           <div class="item">
-              💡 Moon Illumination
-              <span id="moonIllumination">--</span>
-           </div>
+            </div>
+
+
+
+            <!-- AIR QUALITY -->
+
+            <div class="item">
+
+                <span>
+                    🌫 Air Quality
+                </span>
+
+                <span id="aqi">
+                    --
+                </span>
+
+            </div>
+
+
+
+            <!-- MOON PHASE -->
+
+            <div class="item">
+
+                <span>
+                    🌙 Moon Phase
+                </span>
+
+                <span id="moonPhase">
+                    --
+                </span>
+
+            </div>
+
+
+
+            <!-- MOONRISE -->
+
+            <div class="item">
+
+                <span>
+                    🌙 Moonrise
+                </span>
+
+                <span id="moonrise">
+                    --
+                </span>
+
+            </div>
+
+
+
+            <!-- MOONSET -->
+
+            <div class="item">
+
+                <span>
+                    🌙 Moonset
+                </span>
+
+                <span id="moonset">
+                    --
+                </span>
+
+            </div>
+
+
+
+            <!-- MOON ILLUMINATION -->
+
+            <div class="item">
+
+                <span>
+                    💡 Moon Illumination
+                </span>
+
+                <span id="moonIllumination">
+                    --
+                </span>
+
+            </div>
+
         </div>
 
     </section>
 
-    <!-- ================== Weather Alerts================-->
+
+
+    <!-- =====================================================
+         WEATHER ALERTS
+    ====================================================== -->
 
     <section class="alertsSection">
 
-     <h2>⚠ Weather Alerts</h2>
+        <h2>
+            ⚠ Weather Alerts
+        </h2>
 
-     <div id="alertsContainer">
 
-        <p>No alerts available.</p>
+        <div id="alertsContainer">
 
-     </div>
+            <p>
+                No alerts available.
+            </p>
+
+        </div>
 
     </section>
 
-    <!-- ================= HIGHLIGHTS ================= -->
+
+
+    <!-- =====================================================
+         TODAY'S HIGHLIGHTS
+    ====================================================== -->
 
     <section class="highlights">
 
-        <h2>Today's Highlights</h2>
+        <h2>
+            Today's Highlights
+        </h2>
+
 
         <div class="cards">
 
-            <div class="card">
-                🌫
-                <h3>Air Quality</h3>
-                <p>Good</p>
-            </div>
+
+            <!-- AIR QUALITY -->
 
             <div class="card">
-                🌧
-                <h3>Chance of Rain</h3>
-                <p>10%</p>
+
+                <div class="highlight-icon">
+                    🌫
+                </div>
+
+                <h3>
+                    Air Quality
+                </h3>
+
+                <p id="highlightAqi">
+                    Good
+                </p>
+
             </div>
 
-            <div class="card">
-                👁
-                <h3>Visibility</h3>
-                <p>12 km</p>
-            </div>
+
+
+            <!-- RAIN -->
 
             <div class="card">
-                🌡
-                <h3>Feels Like</h3>
-                <p>33°C</p>
+
+                <div class="highlight-icon">
+                    🌧
+                </div>
+
+                <h3>
+                    Chance of Rain
+                </h3>
+
+                <p id="highlightRain">
+                    10%
+                </p>
+
+            </div>
+
+
+
+            <!-- VISIBILITY -->
+
+            <div class="card">
+
+                <div class="highlight-icon">
+                    👁
+                </div>
+
+                <h3>
+                    Visibility
+                </h3>
+
+                <p id="highlightVisibility">
+                    12 km
+                </p>
+
+            </div>
+
+
+
+            <!-- FEELS LIKE -->
+
+            <div class="card">
+
+                <div class="highlight-icon">
+                    🌡
+                </div>
+
+                <h3>
+                    Feels Like
+                </h3>
+
+                <p id="highlightFeels">
+                    33°C
+                </p>
+
             </div>
 
         </div>
 
     </section>
 
-    <!-- ================= 24 HOURS ================= -->
 
-    <section class="hourly" id="forecast">
 
-     <h2>Upcoming 24 Hours</h2>
+    <!-- =====================================================
+         24 HOUR FORECAST
+    ====================================================== -->
 
-     <div class="hourContainer" id="hourContainer">
+    <section
+        class="hourly"
+        id="forecast"
+    >
 
-     </div>
+        <h2>
+            Upcoming 24 Hours
+        </h2>
+
+
+        <div
+            class="hourContainer"
+            id="hourContainer"
+        >
+
+            <p class="loading-message">
+                Search for a city to see hourly forecast.
+            </p>
+
+        </div>
 
     </section>
 
-    <!-- =========== Weather Map ====================-->
+
+
+    <!-- =====================================================
+         WEATHER MAP
+    ====================================================== -->
 
     <section class="mapSection">
 
-     <h2>🗺 Weather Map</h2>
+        <h2>
+            🗺 Weather Map
+        </h2>
 
-     <div id="weatherMap"></div>
+
+        <!-- IMPORTANT:
+             The map needs a fixed/minimum height.
+             Without height Leaflet appears blank.
+        -->
+
+        <div
+            id="weatherMap"
+            class="weatherMap"
+        ></div>
 
     </section>
 
-    <!-- =================== 24 Hour Temperature Trend ================-->
+
+
+    <!-- =====================================================
+         TEMPERATURE CHART
+    ====================================================== -->
+
     <section class="chartSection">
 
-     <h2>📈 24 Hour Temperature Trend</h2>
+        <h2>
+            📈 24 Hour Temperature Trend
+        </h2>
 
-     <canvas id="temperatureChart"></canvas>
-   </section>
 
-    <!-- ================= 7 DAYS ================= -->
+        <div class="chartContainer">
+
+            <canvas
+                id="temperatureChart"
+            ></canvas>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         7 DAY FORECAST
+    ====================================================== -->
 
     <section class="weekly">
 
-      <h2>7 Day Forecast</h2>
+        <h2>
+            7 Day Forecast
+        </h2>
 
-      <table>
 
-         <thead>
+        <div class="tableContainer">
 
-            <tr>
+            <table>
 
-                <th>Day</th>
+                <thead>
 
-                <th>Condition</th>
+                    <tr>
 
-                <th>Temperature</th>
+                        <th>
+                            Day
+                        </th>
 
-            </tr>
+                        <th>
+                            Condition
+                        </th>
 
-         </thead>
+                        <th>
+                            Temperature
+                        </th>
 
-         <tbody id="weeklyForecast">
+                    </tr>
 
-          </tbody>
-      </table>
-  </section>
+                </thead>
 
-    <!-- ================= FAVORITES ================= -->
 
-    <section class="favorites" id="favorites">
+                <tbody id="weeklyForecast">
 
-        <h2>Favorite Cities</h2>
+                    <tr>
 
-        <div id="favoriteContainer"></div>
+                        <td colspan="3">
 
+                            Search for a city to see
+                            the weekly forecast.
+
+                        </td>
+
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
 
     </section>
 
-    <!-- ================= FOOTER ================= -->
+
+
+    <!-- =====================================================
+         FAVORITES
+    ====================================================== -->
+
+    <section
+        class="favorites"
+        id="favorites"
+    >
+
+        <h2>
+            ⭐ Favorite Cities
+        </h2>
+
+
+        <div
+            id="favoriteContainer"
+            class="favContainer"
+        >
+
+            <p class="empty-message">
+                No favorite cities added yet.
+            </p>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
 
     <footer id="about">
 
-        <h3>WeatherSphere</h3>
+        <h3>
+            🌤 WeatherSphere
+        </h3>
+
 
         <p>
             Global Weather Forecast Website
         </p>
 
-    
+
+        <p class="footer-small">
+            Live weather • Hourly forecast •
+            7-day forecast • Weather map
+        </p>
 
     </footer>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+    <!-- =====================================================
+         JAVASCRIPT LIBRARIES
+    ====================================================== -->
+
+    <!-- Leaflet JS -->
+
+    <script
+        src="https://unpkg.com/leaflet/dist/leaflet.js">
+    </script>
+
+
+    <!-- Chart.js -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/chart.js">
+    </script>
+
+
+
+    <!-- =====================================================
+         PROJECT JAVASCRIPT FILES
+         
+         ORDER IS IMPORTANT
+    ====================================================== -->
+
+
+    <!-- Utility functions -->
 
     <script src="js/utils.js"></script>
-    <script src="js/api.js"></script>
+
+
+    <!-- API configuration -->
+
     <script src="js/config.js"></script>
+
+
+    <!-- API functions -->
+
+    <script src="js/api.js"></script>
+
+
+    <!-- Current weather -->
+
     <script src="js/weather.js"></script>
+
+
+    <!-- Forecast -->
+
     <script src="js/forecast.js"></script>
+
+
+    <!-- Theme -->
+
     <script src="js/theme.js"></script>
+
+
+    <!-- Favorites -->
+
     <script src="js/favourites.js"></script>
+
+
+    <!-- Search history -->
+
     <script src="js/searchHistory.js"></script>
+
+
+    <!-- Temperature chart -->
+
     <script src="js/charts.js"></script>
+
+
+    <!-- Weather map -->
+
     <script src="js/map.js"></script>
+
+
+    <!-- Weather alerts -->
+
     <script src="js/alerts.js"></script>
+
+
+    <!-- Autocomplete -->
+
     <script src="js/autocomplete.js"></script>
+
+
+    <!-- Main application -->
+
     <script src="js/app.js"></script>
 
+
 </body>
+
 </html>
