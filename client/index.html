@@ -5,7 +5,10 @@
 
     <meta charset="UTF-8">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>WeatherSphere | Global Weather Forecast</title>
 
@@ -128,7 +131,6 @@
         </p>
 
 
-
         <!-- ================= SEARCH BOX ================= -->
 
         <div class="search-box">
@@ -144,13 +146,12 @@
             >
 
 
-            <!-- AUTOCOMPLETE SUGGESTIONS -->
+            <!-- AUTOCOMPLETE DROPDOWN -->
 
             <div
                 id="suggestions"
                 class="suggestions"
             ></div>
-
 
 
             <!-- SEARCH BUTTON -->
@@ -167,7 +168,6 @@
             </button>
 
 
-
             <!-- CURRENT LOCATION -->
 
             <button
@@ -180,7 +180,6 @@
                 Current Location
 
             </button>
-
 
 
             <!-- FAVORITE -->
@@ -248,7 +247,6 @@
 
         <div class="left">
 
-
             <h2 id="cityName">
                 Pune
             </h2>
@@ -299,7 +297,6 @@
             </div>
 
 
-
             <!-- WIND -->
 
             <div class="item">
@@ -313,7 +310,6 @@
                 </span>
 
             </div>
-
 
 
             <!-- PRESSURE -->
@@ -331,7 +327,6 @@
             </div>
 
 
-
             <!-- FEELS LIKE -->
 
             <div class="item">
@@ -345,7 +340,6 @@
                 </span>
 
             </div>
-
 
 
             <!-- SUNRISE -->
@@ -363,7 +357,6 @@
             </div>
 
 
-
             <!-- SUNSET -->
 
             <div class="item">
@@ -377,7 +370,6 @@
                 </span>
 
             </div>
-
 
 
             <!-- UV -->
@@ -395,7 +387,6 @@
             </div>
 
 
-
             <!-- AIR QUALITY -->
 
             <div class="item">
@@ -409,7 +400,6 @@
                 </span>
 
             </div>
-
 
 
             <!-- MOON PHASE -->
@@ -427,7 +417,6 @@
             </div>
 
 
-
             <!-- MOONRISE -->
 
             <div class="item">
@@ -443,7 +432,6 @@
             </div>
 
 
-
             <!-- MOONSET -->
 
             <div class="item">
@@ -457,7 +445,6 @@
                 </span>
 
             </div>
-
 
 
             <!-- MOON ILLUMINATION -->
@@ -536,7 +523,6 @@
             </div>
 
 
-
             <!-- RAIN -->
 
             <div class="card">
@@ -556,7 +542,6 @@
             </div>
 
 
-
             <!-- VISIBILITY -->
 
             <div class="card">
@@ -574,7 +559,6 @@
                 </p>
 
             </div>
-
 
 
             <!-- FEELS LIKE -->
@@ -621,7 +605,7 @@
         >
 
             <p class="loading-message">
-                Search for a city to see hourly forecast.
+                Loading hourly forecast...
             </p>
 
         </div>
@@ -641,9 +625,9 @@
         </h2>
 
 
-        <!-- IMPORTANT:
-             The map needs a fixed/minimum height.
-             Without height Leaflet appears blank.
+        <!--
+            IMPORTANT:
+            Leaflet requires a fixed/minimum height.
         -->
 
         <div
@@ -720,8 +704,7 @@
 
                         <td colspan="3">
 
-                            Search for a city to see
-                            the weekly forecast.
+                            Loading weekly forecast...
 
                         </td>
 
@@ -795,7 +778,8 @@
          JAVASCRIPT LIBRARIES
     ====================================================== -->
 
-    <!-- Leaflet JS -->
+
+    <!-- Leaflet -->
 
     <script
         src="https://unpkg.com/leaflet/dist/leaflet.js">
@@ -812,12 +796,11 @@
 
     <!-- =====================================================
          PROJECT JAVASCRIPT FILES
-         
          ORDER IS IMPORTANT
     ====================================================== -->
 
 
-    <!-- Utility functions -->
+    <!-- DOM utilities -->
 
     <script src="js/utils.js"></script>
 
@@ -872,9 +855,12 @@
     <script src="js/alerts.js"></script>
 
 
-    <!-- Autocomplete -->
+    <!--
+        IMPORTANT:
+        autocomplete.js is intentionally NOT loaded.
 
-    <script src="js/autocomplete.js"></script>
+        Autocomplete is now handled inside app.js.
+    -->
 
 
     <!-- Main application -->
