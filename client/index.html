@@ -10,6 +10,16 @@
         content="width=device-width, initial-scale=1.0"
     >
 
+    <meta
+        name="description"
+        content="WeatherSphere - Global weather forecast website with live weather, hourly forecast, 7-day forecast, weather map and location search."
+    >
+
+    <meta
+        name="author"
+        content="WeatherSphere"
+    >
+
     <title>WeatherSphere | Global Weather Forecast</title>
 
 
@@ -59,7 +69,7 @@
 
 
     <!-- =====================================================
-         NAVBAR
+         NAVIGATION BAR
     ====================================================== -->
 
     <nav>
@@ -102,6 +112,7 @@
             id="themeBtn"
             type="button"
             title="Toggle Theme"
+            aria-label="Toggle dark and light theme"
         >
             🌙
         </button>
@@ -111,7 +122,7 @@
 
 
     <!-- =====================================================
-         HERO / SEARCH
+         HERO / SEARCH SECTION
     ====================================================== -->
 
     <header
@@ -125,8 +136,8 @@
 
 
         <p>
-            Search any city in the world and get
-            live weather updates, hourly forecast,
+            Search any city, village, state or country
+            and get live weather updates, hourly forecast,
             weekly forecast and much more.
         </p>
 
@@ -136,13 +147,16 @@
         <div class="search-box">
 
 
-            <!-- CITY INPUT -->
+            <!-- CITY / LOCATION INPUT -->
 
             <input
                 type="text"
                 id="cityInput"
-                placeholder="Search any city..."
+                placeholder="Search city, village, state or country..."
                 autocomplete="off"
+                aria-label="Search location"
+                aria-autocomplete="list"
+                aria-controls="suggestions"
             >
 
 
@@ -151,6 +165,8 @@
             <div
                 id="suggestions"
                 class="suggestions"
+                role="listbox"
+                aria-label="Location suggestions"
             ></div>
 
 
@@ -203,7 +219,10 @@
          SEARCH HISTORY
     ====================================================== -->
 
-    <section class="searchHistory">
+    <section
+        class="searchHistory"
+        id="history"
+    >
 
         <h2>
             🕒 Recent Searches
@@ -240,10 +259,13 @@
          CURRENT WEATHER
     ====================================================== -->
 
-    <section class="weatherCard">
+    <section
+        class="weatherCard"
+        id="currentWeather"
+    >
 
 
-        <!-- ================= LEFT ================= -->
+        <!-- ================= LEFT SIDE ================= -->
 
         <div class="left">
 
@@ -260,7 +282,7 @@
             <img
                 id="weatherIcon"
                 src="images/sun.png"
-                alt="Weather Icon"
+                alt="Current weather icon"
             >
 
 
@@ -277,7 +299,7 @@
 
 
 
-        <!-- ================= RIGHT ================= -->
+        <!-- ================= RIGHT SIDE ================= -->
 
         <div class="right">
 
@@ -372,7 +394,7 @@
             </div>
 
 
-            <!-- UV -->
+            <!-- UV INDEX -->
 
             <div class="item">
 
@@ -471,7 +493,10 @@
          WEATHER ALERTS
     ====================================================== -->
 
-    <section class="alertsSection">
+    <section
+        class="alertsSection"
+        id="alerts"
+    >
 
         <h2>
             ⚠ Weather Alerts
@@ -480,9 +505,17 @@
 
         <div id="alertsContainer">
 
-            <p>
-                No alerts available.
-            </p>
+            <div class="alertCard safe">
+
+                <h3>
+                    ✅ No Weather Alerts
+                </h3>
+
+                <p>
+                    No warnings for this location.
+                </p>
+
+            </div>
 
         </div>
 
@@ -494,7 +527,10 @@
          TODAY'S HIGHLIGHTS
     ====================================================== -->
 
-    <section class="highlights">
+    <section
+        class="highlights"
+        id="highlights"
+    >
 
         <h2>
             Today's Highlights
@@ -523,7 +559,7 @@
             </div>
 
 
-            <!-- RAIN -->
+            <!-- CHANCE OF RAIN -->
 
             <div class="card">
 
@@ -618,17 +654,15 @@
          WEATHER MAP
     ====================================================== -->
 
-    <section class="mapSection">
+    <section
+        class="mapSection"
+        id="map"
+    >
 
         <h2>
             🗺 Weather Map
         </h2>
 
-
-        <!--
-            IMPORTANT:
-            Leaflet requires a fixed/minimum height.
-        -->
 
         <div
             id="weatherMap"
@@ -643,7 +677,10 @@
          TEMPERATURE CHART
     ====================================================== -->
 
-    <section class="chartSection">
+    <section
+        class="chartSection"
+        id="temperatureTrend"
+    >
 
         <h2>
             📈 24 Hour Temperature Trend
@@ -666,7 +703,10 @@
          7 DAY FORECAST
     ====================================================== -->
 
-    <section class="weekly">
+    <section
+        class="weekly"
+        id="weekly"
+    >
 
         <h2>
             7 Day Forecast
@@ -703,9 +743,7 @@
                     <tr>
 
                         <td colspan="3">
-
                             Loading weekly forecast...
-
                         </td>
 
                     </tr>
@@ -721,7 +759,7 @@
 
 
     <!-- =====================================================
-         FAVORITES
+         FAVORITE CITIES
     ====================================================== -->
 
     <section
@@ -770,23 +808,29 @@
             7-day forecast • Weather map
         </p>
 
+
+        <p class="footer-small">
+            Built using HTML, CSS, JavaScript,
+            WeatherAPI, Leaflet and Chart.js.
+        </p>
+
     </footer>
 
 
 
     <!-- =====================================================
-         JAVASCRIPT LIBRARIES
+         EXTERNAL JAVASCRIPT LIBRARIES
     ====================================================== -->
 
 
-    <!-- Leaflet -->
+    <!-- LEAFLET -->
 
     <script
         src="https://unpkg.com/leaflet/dist/leaflet.js">
     </script>
 
 
-    <!-- Chart.js -->
+    <!-- CHART.JS -->
 
     <script
         src="https://cdn.jsdelivr.net/npm/chart.js">
@@ -795,75 +839,74 @@
 
 
     <!-- =====================================================
-         PROJECT JAVASCRIPT FILES
-         ORDER IS IMPORTANT
+         WEATHERSPHERE JAVASCRIPT FILES
+         
+         IMPORTANT:
+         The order of these files matters.
     ====================================================== -->
 
 
-    <!-- DOM utilities -->
-
-    <script src="js/utils.js"></script>
-
-
-    <!-- API configuration -->
+    <!-- 1. CONFIGURATION -->
 
     <script src="js/config.js"></script>
 
 
-    <!-- API functions -->
+    <!-- 2. UTILITY FUNCTIONS -->
+
+    <script src="js/utils.js"></script>
+
+
+    <!-- 3. API FUNCTIONS -->
 
     <script src="js/api.js"></script>
 
 
-    <!-- Current weather -->
+    <!-- 4. CURRENT WEATHER -->
 
     <script src="js/weather.js"></script>
 
 
-    <!-- Forecast -->
+    <!-- 5. FORECAST -->
 
     <script src="js/forecast.js"></script>
 
 
-    <!-- Theme -->
+    <!-- 6. THEME -->
 
     <script src="js/theme.js"></script>
 
 
-    <!-- Favorites -->
+    <!-- 7. FAVORITES -->
 
     <script src="js/favourites.js"></script>
 
 
-    <!-- Search history -->
+    <!-- 8. SEARCH HISTORY -->
 
     <script src="js/searchHistory.js"></script>
 
 
-    <!-- Temperature chart -->
+    <!-- 9. TEMPERATURE CHART -->
 
     <script src="js/charts.js"></script>
 
 
-    <!-- Weather map -->
+    <!-- 10. WEATHER MAP -->
 
     <script src="js/map.js"></script>
 
 
-    <!-- Weather alerts -->
+    <!-- 11. WEATHER ALERTS -->
 
     <script src="js/alerts.js"></script>
 
 
-    <!--
-        IMPORTANT:
-        autocomplete.js is intentionally NOT loaded.
+    <!-- 12. AUTOCOMPLETE -->
 
-        Autocomplete is now handled inside app.js.
-    -->
+    <script src="js/autocomplete.js"></script>
 
 
-    <!-- Main application -->
+    <!-- 13. MAIN APPLICATION -->
 
     <script src="js/app.js"></script>
 

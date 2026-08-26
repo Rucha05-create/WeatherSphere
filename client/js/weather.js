@@ -1,14 +1,27 @@
 // ============================================================
-// WEATHER.JS
+// WEATHERSPHERE - WEATHER.JS
 // ============================================================
 // Handles:
-// 1. Fetching weather data
+// 1. Fetching weather data through backend
 // 2. Updating current weather
-// 3. Updating highlights
-// 4. Updating weather map
-// 5. Updating temperature chart
-// 6. Updating alerts
+// 3. Updating location information
+// 4. Updating air quality
+// 5. Updating today's highlights
+// 6. Updating hourly forecast
+// 7. Updating weekly forecast
+// 8. Updating temperature chart
+// 9. Updating weather map
+// 10. Updating weather alerts
+// 11. Updating search history
 // ============================================================
+
+
+// ============================================================
+// BACKEND API BASE URL
+// ============================================================
+
+const BACKEND_API_BASE_URL =
+    "http://localhost:5000/api";
 
 
 // ============================================================
@@ -17,101 +30,199 @@
 
 async function getWeather(city) {
 
-    // Make sure city exists
-    if (!city || city.trim() === "") {
-        alert("Please enter a city name.");
+    // --------------------------------------------------------
+    // Validate search
+    // --------------------------------------------------------
+
+    if (
+        !city ||
+        String(city).trim() === ""
+    ) {
+
+        alert(
+            "Please enter a city, village, district, state or country."
+        );
+
         return;
+
     }
+
+
+    // --------------------------------------------------------
+    // Clean search query
+    // --------------------------------------------------------
+
+    const searchQuery =
+        String(city).trim();
+
+
+    // --------------------------------------------------------
+    // Show loading state
+    // --------------------------------------------------------
+
+    if (typeof searchBtn !== "undefined" && searchBtn) {
+
+        searchBtn.innerHTML =
+            '<i class="fa-solid fa-spinner fa-spin"></i> Searching...';
+
+        searchBtn.disabled = true;
+
+    }
+
 
     try {
 
-        // ----------------------------------------------------
-        // Show loading state
-        // ----------------------------------------------------
+        // ====================================================
+        // BACKEND WEATHER REQUEST
+        // ====================================================
+        //
+        // IMPORTANT:
+        // encodeURIComponent() converts:
+        //
+        // Los Angeles
+        //       ↓
+        // Los%20Angeles
+        //
+        // This prevents spaces and special characters from
+        // breaking the URL.
+        //
+        // Backend receives:
+        // /api/weather/Los%20Angeles
+        //
+        // Express automatically decodes the route parameter.
+        // ====================================================
 
-        if (searchBtn) {
-            searchBtn.innerHTML =
-                '<i class="fa-solid fa-spinner fa-spin"></i> Searching...';
+        const encodedCity =
+            encodeURIComponent(searchQuery);
 
-            searchBtn.disabled = true;
+
+        const url =
+            `${BACKEND_API_BASE_URL}/weather/${encodedCity}`;
+
+
+        console.log(
+            "WeatherSphere - Fetching from backend:",
+            searchQuery
+        );
+
+
+        console.log(
+            "WeatherSphere - Backend URL:",
+            url
+        );
+
+
+        const response =
+            await fetch(url);
+
+
+        // ====================================================
+        // READ RESPONSE
+        // ====================================================
+
+        let data = null;
+
+
+        try {
+
+            data =
+                await response.json();
+
+        }
+
+        catch (jsonError) {
+
+            console.error(
+                "WeatherSphere - Invalid backend response:",
+                jsonError
+            );
+
+            throw new Error(
+                `Backend returned an invalid response (${response.status}).`
+            );
+
         }
 
 
-        // ----------------------------------------------------
-        // WeatherAPI Request
-        // ----------------------------------------------------
-
-        const url =
-            `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${encodeURIComponent(city)}&days=7&aqi=yes&alerts=yes`;
-
-        console.log("Fetching weather:", url);
-
-
-        const response = await fetch(url);
-
-
-        // ----------------------------------------------------
-        // Check HTTP response
-        // ----------------------------------------------------
+        // ====================================================
+        // HTTP ERROR
+        // ====================================================
 
         if (!response.ok) {
 
-            throw new Error(
-                `Weather API error: ${response.status}`
+            const message =
+                data?.error?.message ||
+                data?.message ||
+                `Weather request failed (${response.status}).`;
+
+
+            console.error(
+                "WeatherSphere - Backend Error:",
+                message
             );
+
+
+            throw new Error(message);
 
         }
 
 
-        const data = await response.json();
+        // ====================================================
+        // API ERROR
+        // ====================================================
+
+        if (data?.error) {
+
+            const message =
+                data.error.message ||
+                "Unable to retrieve weather information.";
 
 
-        console.log("Weather API Response:", data);
+            throw new Error(message);
 
-
-        // ----------------------------------------------------
-        // Check API error
-        // ----------------------------------------------------
-
-        if (data.error) {
-
-            alert(
-                "Unable to find weather data: " +
-                data.error.message
-            );
-
-            return;
         }
 
 
-        // ----------------------------------------------------
-        // Make sure forecast data exists
-        // ----------------------------------------------------
+        // ====================================================
+        // VALIDATE RESPONSE
+        // ====================================================
 
         if (
+            !data ||
             !data.location ||
             !data.current ||
             !data.forecast ||
-            !data.forecast.forecastday
+            !Array.isArray(data.forecast.forecastday)
         ) {
 
             throw new Error(
-                "Invalid weather data received from API."
+                "Incomplete weather data received from the server."
             );
 
         }
 
 
         // ====================================================
-        // UPDATE ALL WEBSITE SECTIONS
+        // LOG SUCCESSFUL RESPONSE
         // ====================================================
 
+        console.log(
+            "WeatherSphere - API Response:",
+            data
+        );
 
-        // Current weather
+
+        // ====================================================
+        // UPDATE CURRENT WEATHER
+        // ====================================================
+
         updateCurrentWeather(data);
 
 
-        // Hourly forecast
+        // ====================================================
+        // UPDATE HOURLY FORECAST
+        // ====================================================
+
         if (
             typeof updateHourlyForecast === "function"
         ) {
@@ -121,7 +232,10 @@ async function getWeather(city) {
         }
 
 
-        // 7 day forecast
+        // ====================================================
+        // UPDATE WEEKLY FORECAST
+        // ====================================================
+
         if (
             typeof updateWeeklyForecast === "function"
         ) {
@@ -131,7 +245,10 @@ async function getWeather(city) {
         }
 
 
-        // Temperature chart
+        // ====================================================
+        // UPDATE TEMPERATURE CHART
+        // ====================================================
+
         if (
             typeof updateTemperatureChart === "function"
         ) {
@@ -141,7 +258,10 @@ async function getWeather(city) {
         }
 
 
-        // Weather map
+        // ====================================================
+        // UPDATE WEATHER MAP
+        // ====================================================
+
         if (
             typeof updateWeatherMap === "function"
         ) {
@@ -151,7 +271,10 @@ async function getWeather(city) {
         }
 
 
-        // Weather alerts
+        // ====================================================
+        // UPDATE WEATHER ALERTS
+        // ====================================================
+
         if (
             typeof updateWeatherAlerts === "function"
         ) {
@@ -161,12 +284,77 @@ async function getWeather(city) {
         }
 
 
-        // ----------------------------------------------------
-        // Scroll to weather section
-        // ----------------------------------------------------
+        // ====================================================
+        // SAVE SEARCH HISTORY
+        // ====================================================
+
+        if (
+            typeof saveSearch === "function"
+        ) {
+
+            try {
+
+                await saveSearch(
+                    data.location.name,
+                    data.location.country
+                );
+
+            }
+
+            catch (historyError) {
+
+                console.error(
+                    "WeatherSphere - Search history error:",
+                    historyError
+                );
+
+            }
+
+        }
+
+
+        // ====================================================
+        // RELOAD SEARCH HISTORY
+        // ====================================================
+
+        if (
+            typeof loadSearchHistory === "function"
+        ) {
+
+            try {
+
+                await loadSearchHistory();
+
+            }
+
+            catch (historyLoadError) {
+
+                console.error(
+                    "WeatherSphere - Unable to load search history:",
+                    historyLoadError
+                );
+
+            }
+
+        }
+
+
+        // ====================================================
+        // SUCCESS MESSAGE
+        // ====================================================
+
+        console.log(
+            "WeatherSphere - Weather successfully loaded."
+        );
+
+
+        // ====================================================
+        // SCROLL TO WEATHER CARD
+        // ====================================================
 
         const weatherCard =
             document.querySelector(".weatherCard");
+
 
         if (weatherCard) {
 
@@ -177,34 +365,68 @@ async function getWeather(city) {
                     block: "start"
                 });
 
-            }, 200);
+            }, 250);
 
         }
 
-
     }
+
+
+    // ========================================================
+    // ERROR HANDLING
+    // ========================================================
 
     catch (error) {
 
         console.error(
-            "Weather loading error:",
+            "WeatherSphere Error:",
             error
         );
 
+
+        // ----------------------------------------------------
+        // Display useful error message
+        // ----------------------------------------------------
+
+        let message =
+            error?.message ||
+            "Unable to load weather information.";
+
+
+        // ----------------------------------------------------
+        // Network / backend unavailable
+        // ----------------------------------------------------
+
+        if (
+            error instanceof TypeError ||
+            message.toLowerCase().includes("failed to fetch")
+        ) {
+
+            message =
+                "Unable to connect to the WeatherSphere backend.\n\n" +
+                "Please make sure your Node.js server is running on:\n" +
+                "http://localhost:5000";
+
+        }
+
+
         alert(
-            "Something went wrong while loading weather data.\n\n" +
-            error.message
+            message
         );
 
     }
 
+
+    // ========================================================
+    // RESTORE SEARCH BUTTON
+    // ========================================================
+
     finally {
 
-        // ----------------------------------------------------
-        // Restore search button
-        // ----------------------------------------------------
-
-        if (searchBtn) {
+        if (
+            typeof searchBtn !== "undefined" &&
+            searchBtn
+        ) {
 
             searchBtn.innerHTML =
                 '<i class="fa-solid fa-magnifying-glass"></i> Search';
@@ -225,45 +447,114 @@ async function getWeather(city) {
 
 function updateCurrentWeather(data) {
 
-    console.log("Updating current weather...");
+    console.log(
+        "WeatherSphere - Updating current weather..."
+    );
 
 
     // ========================================================
-    // LOCATION
+    // LOCATION DATA
     // ========================================================
+
+    const location =
+        data.location || {};
+
 
     const locationName =
-        data.location.name || "--";
+        location.name || "--";
 
 
     const country =
-        data.location.country || "--";
+        location.country || "--";
 
 
-    if (cityName) {
+    const region =
+        location.region || "";
+
+
+    const district =
+        location.district || "";
+
+
+    // ========================================================
+    // CITY NAME
+    // ========================================================
+
+    if (
+        typeof cityName !== "undefined" &&
+        cityName
+    ) {
 
         cityName.textContent =
-            capitalize(locationName);
+            locationName;
 
     }
 
 
-    if (countryName) {
+    // ========================================================
+    // COUNTRY + STATE + DISTRICT
+    // ========================================================
+
+    if (
+        typeof countryName !== "undefined" &&
+        countryName
+    ) {
+
+        const locationParts = [];
+
+
+        if (district) {
+
+            locationParts.push(
+                district
+            );
+
+        }
+
+
+        if (
+            region &&
+            region !== district &&
+            region !== locationName
+        ) {
+
+            locationParts.push(
+                region
+            );
+
+        }
+
+
+        if (country) {
+
+            locationParts.push(
+                country
+            );
+
+        }
+
 
         countryName.textContent =
-            country;
+            locationParts.join(" • ");
 
     }
 
 
     // ========================================================
-    // CURRENT TEMPERATURE
+    // TEMPERATURE
     // ========================================================
 
-    if (temperature) {
+    if (
+        typeof temperature !== "undefined" &&
+        temperature
+    ) {
+
+        const temp =
+            data.current.temp_c;
+
 
         temperature.textContent =
-            `${data.current.temp_c}°C`;
+            `${temp}°C`;
 
     }
 
@@ -272,10 +563,14 @@ function updateCurrentWeather(data) {
     // WEATHER CONDITION
     // ========================================================
 
-    if (condition) {
+    if (
+        typeof condition !== "undefined" &&
+        condition
+    ) {
 
         condition.textContent =
-            data.current.condition.text;
+            data.current.condition?.text ||
+            "--";
 
     }
 
@@ -284,14 +579,28 @@ function updateCurrentWeather(data) {
     // WEATHER ICON
     // ========================================================
 
-    if (weatherIcon) {
+    if (
+        typeof weatherIcon !== "undefined" &&
+        weatherIcon
+    ) {
 
-        weatherIcon.src =
-            "https:" +
-            data.current.condition.icon;
+        const icon =
+            data.current.condition?.icon;
+
+
+        if (icon) {
+
+            weatherIcon.src =
+                icon.startsWith("http")
+                    ? icon
+                    : "https:" + icon;
+
+        }
+
 
         weatherIcon.alt =
-            data.current.condition.text;
+            data.current.condition?.text ||
+            "Weather Icon";
 
     }
 
@@ -300,10 +609,13 @@ function updateCurrentWeather(data) {
     // HUMIDITY
     // ========================================================
 
-    if (humidity) {
+    if (
+        typeof humidity !== "undefined" &&
+        humidity
+    ) {
 
         humidity.textContent =
-            `${data.current.humidity}%`;
+            `${data.current.humidity ?? "--"}%`;
 
     }
 
@@ -312,10 +624,13 @@ function updateCurrentWeather(data) {
     // WIND
     // ========================================================
 
-    if (wind) {
+    if (
+        typeof wind !== "undefined" &&
+        wind
+    ) {
 
         wind.textContent =
-            `${data.current.wind_kph} km/h`;
+            `${data.current.wind_kph ?? "--"} km/h`;
 
     }
 
@@ -324,10 +639,13 @@ function updateCurrentWeather(data) {
     // PRESSURE
     // ========================================================
 
-    if (pressure) {
+    if (
+        typeof pressure !== "undefined" &&
+        pressure
+    ) {
 
         pressure.textContent =
-            `${data.current.pressure_mb} hPa`;
+            `${data.current.pressure_mb ?? "--"} hPa`;
 
     }
 
@@ -336,128 +654,67 @@ function updateCurrentWeather(data) {
     // FEELS LIKE
     // ========================================================
 
-    if (feelsLike) {
+    if (
+        typeof feelsLike !== "undefined" &&
+        feelsLike
+    ) {
 
         const feels =
             data.current.feelslike_c;
 
-        feelsLike.textContent =
-            `${feels}°C`;
 
+        if (
+            feels !== undefined &&
+            feels !== null
+        ) {
 
-        // Temperature-based color
-
-        if (feels >= 35) {
-
-            feelsLike.style.color =
-                "red";
-
-        }
-
-        else if (feels <= 10) {
-
-            feelsLike.style.color =
-                "deepskyblue";
+            feelsLike.textContent =
+                `${feels}°C`;
 
         }
 
         else {
 
-            feelsLike.style.color =
-                "";
-
-        }
-
-    }
-
-
-    // ========================================================
-    // TODAY'S ASTRO DATA
-    // ========================================================
-
-    const today =
-        data.forecast.forecastday[0];
-
-
-    if (today && today.astro) {
-
-
-        // ----------------------------------------------------
-        // Sunrise
-        // ----------------------------------------------------
-
-        if (sunrise) {
-
-            sunrise.textContent =
-                today.astro.sunrise || "--";
+            feelsLike.textContent =
+                "--";
 
         }
 
 
         // ----------------------------------------------------
-        // Sunset
+        // Temperature indicator
         // ----------------------------------------------------
 
-        if (sunset) {
+        if (feels >= 35) {
 
-            sunset.textContent =
-                today.astro.sunset || "--";
+            feelsLike.classList.add(
+                "hot-value"
+            );
+
+            feelsLike.classList.remove(
+                "cold-value"
+            );
 
         }
 
+        else if (feels <= 10) {
 
-        // ----------------------------------------------------
-        // Moon Phase
-        // ----------------------------------------------------
+            feelsLike.classList.add(
+                "cold-value"
+            );
 
-        if (moonPhase) {
-
-            const phase =
-                today.astro.moon_phase || "--";
-
-
-            const moonIcon =
-                getMoonIcon(phase);
-
-
-            moonPhase.textContent =
-                `${moonIcon} ${phase}`;
+            feelsLike.classList.remove(
+                "hot-value"
+            );
 
         }
 
+        else {
 
-        // ----------------------------------------------------
-        // Moonrise
-        // ----------------------------------------------------
-
-        if (moonrise) {
-
-            moonrise.textContent =
-                today.astro.moonrise || "--";
-
-        }
-
-
-        // ----------------------------------------------------
-        // Moonset
-        // ----------------------------------------------------
-
-        if (moonset) {
-
-            moonset.textContent =
-                today.astro.moonset || "--";
-
-        }
-
-
-        // ----------------------------------------------------
-        // Moon Illumination
-        // ----------------------------------------------------
-
-        if (moonIllumination) {
-
-            moonIllumination.textContent =
-                `${today.astro.moon_illumination || 0}%`;
+            feelsLike.classList.remove(
+                "hot-value",
+                "cold-value"
+            );
 
         }
 
@@ -468,12 +725,22 @@ function updateCurrentWeather(data) {
     // UV INDEX
     // ========================================================
 
-    if (uv) {
+    if (
+        typeof uv !== "undefined" &&
+        uv
+    ) {
 
         uv.textContent =
             data.current.uv ?? "--";
 
     }
+
+
+    // ========================================================
+    // ASTRONOMICAL INFORMATION
+    // ========================================================
+
+    updateAstronomy(data);
 
 
     // ========================================================
@@ -490,34 +757,145 @@ function updateCurrentWeather(data) {
     updateHighlights(data);
 
 
-    // ========================================================
-    // SEARCH HISTORY
-    // ========================================================
-
-    if (
-        typeof saveSearch === "function"
-    ) {
-
-        saveSearch(
-            locationName,
-            country
-        );
-
-    }
-
-
-    if (
-        typeof loadSearchHistory === "function"
-    ) {
-
-        loadSearchHistory();
-
-    }
-
-
     console.log(
-        "Current weather updated successfully."
+        "WeatherSphere - Current weather updated."
     );
+
+}
+
+
+
+// ============================================================
+// UPDATE ASTRONOMY
+// ============================================================
+
+function updateAstronomy(data) {
+
+    const forecastDays =
+        data.forecast?.forecastday;
+
+
+    if (
+        !forecastDays ||
+        forecastDays.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    const today =
+        forecastDays[0];
+
+
+    const astro =
+        today.astro;
+
+
+    if (!astro) {
+
+        return;
+
+    }
+
+
+    // ========================================================
+    // SUNRISE
+    // ========================================================
+
+    if (
+        typeof sunrise !== "undefined" &&
+        sunrise
+    ) {
+
+        sunrise.textContent =
+            astro.sunrise || "--";
+
+    }
+
+
+    // ========================================================
+    // SUNSET
+    // ========================================================
+
+    if (
+        typeof sunset !== "undefined" &&
+        sunset
+    ) {
+
+        sunset.textContent =
+            astro.sunset || "--";
+
+    }
+
+
+    // ========================================================
+    // MOON PHASE
+    // ========================================================
+
+    if (
+        typeof moonPhase !== "undefined" &&
+        moonPhase
+    ) {
+
+        const phase =
+            astro.moon_phase || "--";
+
+
+        const icon =
+            getMoonIcon(phase);
+
+
+        moonPhase.textContent =
+            `${icon} ${phase}`;
+
+    }
+
+
+    // ========================================================
+    // MOONRISE
+    // ========================================================
+
+    if (
+        typeof moonrise !== "undefined" &&
+        moonrise
+    ) {
+
+        moonrise.textContent =
+            astro.moonrise || "--";
+
+    }
+
+
+    // ========================================================
+    // MOONSET
+    // ========================================================
+
+    if (
+        typeof moonset !== "undefined" &&
+        moonset
+    ) {
+
+        moonset.textContent =
+            astro.moonset || "--";
+
+    }
+
+
+    // ========================================================
+    // MOON ILLUMINATION
+    // ========================================================
+
+    if (
+        typeof moonIllumination !== "undefined" &&
+        moonIllumination
+    ) {
+
+        moonIllumination.textContent =
+            `${astro.moon_illumination ?? "--"}%`;
+
+    }
 
 }
 
@@ -529,15 +907,18 @@ function updateCurrentWeather(data) {
 
 function updateAirQuality(data) {
 
-    if (!aqi) {
+    if (
+        typeof aqi === "undefined" ||
+        !aqi
+    ) {
+
         return;
+
     }
 
 
-    // WeatherAPI air quality data
-
     const airQuality =
-        data.current.air_quality;
+        data.current?.air_quality;
 
 
     if (
@@ -554,42 +935,31 @@ function updateAirQuality(data) {
 
 
     const index =
-        airQuality["us-epa-index"];
+        Number(
+            airQuality["us-epa-index"]
+        );
 
 
-    let text;
+    const airQualityNames = {
+
+        1: "Good",
+
+        2: "Moderate",
+
+        3: "Unhealthy for Sensitive Groups",
+
+        4: "Unhealthy",
+
+        5: "Very Unhealthy",
+
+        6: "Hazardous"
+
+    };
 
 
-    switch (index) {
-
-        case 1:
-            text = "Good";
-            break;
-
-        case 2:
-            text = "Moderate";
-            break;
-
-        case 3:
-            text = "Unhealthy for Sensitive Groups";
-            break;
-
-        case 4:
-            text = "Unhealthy";
-            break;
-
-        case 5:
-            text = "Very Unhealthy";
-            break;
-
-        case 6:
-            text = "Hazardous";
-            break;
-
-        default:
-            text = "Unknown";
-
-    }
+    const text =
+        airQualityNames[index] ||
+        "Unknown";
 
 
     aqi.textContent =
@@ -611,10 +981,13 @@ function updateHighlights(data) {
         );
 
 
-    if (!cards || cards.length === 0) {
+    if (
+        !cards ||
+        cards.length === 0
+    ) {
 
         console.warn(
-            "Highlight cards not found."
+            "WeatherSphere - Highlight cards not found."
         );
 
         return;
@@ -622,16 +995,20 @@ function updateHighlights(data) {
     }
 
 
+    const current =
+        data.current || {};
+
+
     const today =
-        data.forecast.forecastday[0];
+        data.forecast?.forecastday?.[0];
 
 
-    // --------------------------------------------------------
-    // Air Quality
-    // --------------------------------------------------------
+    // ========================================================
+    // AIR QUALITY
+    // ========================================================
 
     const airQuality =
-        data.current.air_quality;
+        current.air_quality;
 
 
     let airQualityText =
@@ -640,66 +1017,72 @@ function updateHighlights(data) {
 
     if (
         airQuality &&
-        airQuality["us-epa-index"]
+        airQuality["us-epa-index"] !== undefined
     ) {
 
         const index =
-            airQuality["us-epa-index"];
+            Number(
+                airQuality["us-epa-index"]
+            );
 
 
         const names = {
 
             1: "Good",
+
             2: "Moderate",
+
             3: "Unhealthy for Sensitive Groups",
+
             4: "Unhealthy",
+
             5: "Very Unhealthy",
+
             6: "Hazardous"
 
         };
 
 
         airQualityText =
-            names[index] || "Unknown";
+            names[index] ||
+            "Unknown";
 
     }
 
 
-    // --------------------------------------------------------
-    // Chance of Rain
-    // --------------------------------------------------------
+    // ========================================================
+    // CHANCE OF RAIN
+    // ========================================================
 
     const rainChance =
-        today &&
-        today.day
-            ? today.day.daily_chance_of_rain
-            : 0;
+        today?.day?.daily_chance_of_rain;
 
 
-    // --------------------------------------------------------
-    // Visibility
-    // --------------------------------------------------------
+    // ========================================================
+    // VISIBILITY
+    // ========================================================
 
     const visibility =
-        data.current.vis_km;
+        current.vis_km;
 
 
-    // --------------------------------------------------------
-    // Feels Like
-    // --------------------------------------------------------
+    // ========================================================
+    // FEELS LIKE
+    // ========================================================
 
     const feels =
-        data.current.feelslike_c;
+        current.feelslike_c;
 
 
-    // --------------------------------------------------------
-    // Update Cards
-    // --------------------------------------------------------
+    // ========================================================
+    // UPDATE AIR QUALITY CARD
+    // ========================================================
 
     if (cards[0]) {
 
         const value =
             cards[0].querySelector("p");
+
 
         if (value) {
 
@@ -711,45 +1094,66 @@ function updateHighlights(data) {
     }
 
 
+    // ========================================================
+    // UPDATE RAIN CARD
+    // ========================================================
+
     if (cards[1]) {
 
         const value =
             cards[1].querySelector("p");
 
+
         if (value) {
 
             value.textContent =
-                `${rainChance ?? 0}%`;
+                rainChance !== undefined
+                    ? `${rainChance}%`
+                    : "--";
 
         }
 
     }
 
+
+    // ========================================================
+    // UPDATE VISIBILITY CARD
+    // ========================================================
 
     if (cards[2]) {
 
         const value =
             cards[2].querySelector("p");
 
+
         if (value) {
 
             value.textContent =
-                `${visibility ?? "--"} km`;
+                visibility !== undefined
+                    ? `${visibility} km`
+                    : "--";
 
         }
 
     }
 
 
+    // ========================================================
+    // UPDATE FEELS LIKE CARD
+    // ========================================================
+
     if (cards[3]) {
 
         const value =
             cards[3].querySelector("p");
 
+
         if (value) {
 
             value.textContent =
-                `${feels ?? "--"}°C`;
+                feels !== undefined
+                    ? `${feels}°C`
+                    : "--";
 
         }
 
@@ -801,55 +1205,177 @@ function getMoonIcon(phase) {
 
 
 // ============================================================
-// CAPITALIZE CITY NAME
+// LOCATION DISPLAY HELPER
 // ============================================================
 
-function capitalize(text) {
+function getLocationDisplay(location) {
 
-    if (!text) {
+    if (!location) {
+
         return "--";
+
     }
 
 
-    return text.charAt(0).toUpperCase() +
-           text.slice(1);
+    const parts = [];
+
+
+    if (location.district) {
+
+        parts.push(
+            location.district
+        );
+
+    }
+
+
+    if (
+        location.region &&
+        location.region !== location.district
+    ) {
+
+        parts.push(
+            location.region
+        );
+
+    }
+
+
+    if (location.country) {
+
+        parts.push(
+            location.country
+        );
+
+    }
+
+
+    return parts.join(" • ");
 
 }
 
 
 
 // ============================================================
-// TEST FUNCTION
+// CAPITALIZE TEXT
 // ============================================================
-// You can run this from browser console:
+
+function capitalize(text) {
+
+    if (!text) {
+
+        return "--";
+
+    }
+
+
+    return (
+        text.charAt(0).toUpperCase() +
+        text.slice(1)
+    );
+
+}
+
+
+
+// ============================================================
+// TEST WEATHER
+// ============================================================
+// Run this in browser console:
+//
 // testWeather();
 //
-// This is useful if the website is not loading data.
 // ============================================================
 
 function testWeather() {
 
     console.log(
-        "Testing WeatherSphere..."
+        "================================"
+    );
+
+    console.log(
+        "WeatherSphere Test"
+    );
+
+    console.log(
+        "================================"
     );
 
 
-    if (!API_KEY) {
-
-        console.error(
-            "API_KEY is missing!"
-        );
-
-        return;
-
-    }
-
-
     console.log(
-        "API key exists."
+        "Testing backend connection..."
     );
 
 
     getWeather("Pune");
 
 }
+
+
+
+// ============================================================
+// TEST LOCATION WITH SPACES
+// ============================================================
+// Run this in browser console:
+//
+// testLocationWithSpaces();
+//
+// This specifically tests:
+//
+// Los Angeles
+// New York
+// New Delhi
+// Chatrapati Sambhajinagar
+//
+// ============================================================
+
+function testLocationWithSpaces() {
+
+    console.log(
+        "================================"
+    );
+
+    console.log(
+        "WeatherSphere - Space Encoding Test"
+    );
+
+    console.log(
+        "================================"
+    );
+
+
+    const city =
+        "Los Angeles";
+
+
+    const encodedCity =
+        encodeURIComponent(city);
+
+
+    console.log(
+        "Original:",
+        city
+    );
+
+
+    console.log(
+        "Encoded:",
+        encodedCity
+    );
+
+
+    console.log(
+        "Request URL:",
+        `${BACKEND_API_BASE_URL}/weather/${encodedCity}`
+    );
+
+
+    getWeather(city);
+
+}
+
+
+
+// ============================================================
+// END OF WEATHER.JS
+// ============================================================

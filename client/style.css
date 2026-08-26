@@ -124,6 +124,13 @@ nav ul {
 }
 
 
+nav li {
+
+    list-style: none;
+
+}
+
+
 nav a {
 
     color: white;
@@ -133,7 +140,6 @@ nav a {
     font-weight: 500;
 
     transition: 0.3s ease;
-
 }
 
 
@@ -143,6 +149,10 @@ nav a:hover {
 
 }
 
+
+/* =========================================================
+   THEME BUTTON
+========================================================= */
 
 #themeBtn {
 
@@ -185,6 +195,7 @@ nav a:hover {
 
     text-align: center;
 
+    position: relative;
 }
 
 
@@ -261,7 +272,6 @@ nav a:hover {
     color: #333;
 
     transition: 0.3s ease;
-
 }
 
 
@@ -287,51 +297,50 @@ nav a:hover {
    AUTOCOMPLETE DROPDOWN
 ========================================================= */
 
-/*
-   IMPORTANT:
-
-   The dropdown is positioned relative to .search-box.
-
-   It appears directly below the search input.
-*/
-
 .suggestions {
 
     position: absolute;
 
-    top: 67px;
+    top: 62px;
 
-    left: calc(50% - 475px);
+    left: 0;
 
     width: 380px;
 
-    max-height: 300px;
+    max-height: 320px;
 
     overflow-y: auto;
 
     background: white;
 
-    border-radius: 12px;
+    border-radius: 14px;
 
     box-shadow:
-        0 8px 25px rgba(0, 0, 0, 0.25);
+        0 10px 30px rgba(0, 0, 0, 0.30);
 
     display: none;
 
-    z-index: 9999;
+    z-index: 99999;
 
     color: #222;
 
     text-align: left;
 
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(0, 0, 0, 0.10);
+
 }
 
 
 /*
-   JavaScript can use display:block
-   when suggestions are available.
+   JavaScript changes display to block
+   when results are available.
 */
+
+.suggestions[style*="display: block"] {
+
+    display: block;
+}
+
 
 .suggestions.show {
 
@@ -340,11 +349,13 @@ nav a:hover {
 }
 
 
-/* Individual suggestion */
+/* =========================================================
+   INDIVIDUAL SUGGESTION
+========================================================= */
 
 .suggestion {
 
-    padding: 13px 16px;
+    padding: 14px 16px;
 
     cursor: pointer;
 
@@ -354,11 +365,19 @@ nav a:hover {
 
     border-bottom: 1px solid #eeeeee;
 
-    transition: background 0.2s ease;
+    transition: 0.2s ease;
 
     font-size: 14px;
 
     line-height: 1.4;
+
+}
+
+
+.suggestion:first-child {
+
+    border-radius: 14px 14px 0 0;
+
 }
 
 
@@ -366,53 +385,97 @@ nav a:hover {
 
     border-bottom: none;
 
+    border-radius: 0 0 14px 14px;
+
 }
 
 
 .suggestion:hover {
 
-    background: #f1f7ff;
+    background: #eef7ff;
 
 }
 
 
-/* Location icon */
+.suggestion-selected {
 
-.suggestion i {
+    background: #e5f2ff !important;
 
-    color: #2196f3;
-
-    margin-right: 10px;
-
-    width: 18px;
-
-    text-align: center;
 }
 
 
-/* Suggestion city name */
+/* =========================================================
+   SUGGESTION TITLE
+========================================================= */
 
-.suggestion strong {
+.suggestion-title {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
 
     color: #222;
 
-    font-weight: 600;
 }
 
 
-/* Country/state information */
+.suggestion-title i {
 
+    color: #2196f3;
+
+    font-size: 15px;
+
+}
+
+
+.suggestion-title strong {
+
+    font-weight: 600;
+
+    color: #222;
+
+}
+
+
+/* =========================================================
+   SUGGESTION LOCATION DETAILS
+========================================================= */
+
+.suggestion-location,
 .suggestion small {
 
     display: block;
 
-    margin-left: 28px;
+    margin-left: 25px;
 
-    margin-top: 2px;
+    margin-top: 4px;
 
     color: #777;
 
     font-size: 12px;
+
+    line-height: 1.5;
+}
+
+
+/*
+   This is useful when showing:
+
+   City
+   District, State, Country
+
+   Example:
+
+   Pune
+   Pune District, Maharashtra, India
+*/
+
+.suggestion-location {
+
+    white-space: normal;
+
 }
 
 
@@ -451,7 +514,7 @@ nav a:hover {
 
 
 /* =========================================================
-   COMMON SEARCH BUTTON
+   SEARCH BUTTONS
 ========================================================= */
 
 .search-box button {
@@ -475,6 +538,16 @@ nav a:hover {
     transition: 0.3s ease;
 
     white-space: nowrap;
+}
+
+
+.search-box button:disabled {
+
+    opacity: 0.6;
+
+    cursor: not-allowed;
+
+    transform: none !important;
 }
 
 
@@ -539,13 +612,6 @@ nav a:hover {
 }
 
 
-#locationBtn i {
-
-    font-size: 16px;
-
-}
-
-
 /* =========================================================
    FAVORITES BUTTON
 ========================================================= */
@@ -600,6 +666,7 @@ nav a:hover {
     margin-bottom: 20px;
 
     font-size: 25px;
+
 }
 
 
@@ -625,6 +692,7 @@ nav a:hover {
     cursor: pointer;
 
     transition: 0.3s ease;
+
 }
 
 
@@ -633,6 +701,16 @@ nav a:hover {
     background: rgba(255, 255, 255, 0.3);
 
     transform: translateY(-3px);
+
+}
+
+
+.empty-message {
+
+    opacity: 0.8;
+
+    font-size: 14px;
+
 }
 
 
@@ -664,8 +742,6 @@ nav a:hover {
 
     transition: all 0.3s ease;
 
-    box-shadow:
-        0 4px 10px rgba(220, 53, 69, 0.3);
 }
 
 
@@ -675,8 +751,6 @@ nav a:hover {
 
     transform: translateY(-3px);
 
-    box-shadow:
-        0 8px 18px rgba(220, 53, 69, 0.4);
 }
 
 
@@ -690,7 +764,7 @@ nav a:hover {
 
     max-width: 1400px;
 
-    margin: auto;
+    margin: 0 auto 70px;
 
     display: flex;
 
@@ -709,7 +783,7 @@ nav a:hover {
     -webkit-backdrop-filter: blur(18px);
 
     box-shadow:
-        0 10px 30px rgba(0, 0, 0, 0.2);
+        0 10px 30px rgba(0, 0, 0, 0.20);
 }
 
 
@@ -738,6 +812,7 @@ nav a:hover {
     font-size: 35px;
 
     margin-bottom: 5px;
+
 }
 
 
@@ -748,6 +823,7 @@ nav a:hover {
     font-weight: 400;
 
     opacity: 0.9;
+
 }
 
 
@@ -760,6 +836,7 @@ nav a:hover {
     object-fit: contain;
 
     margin: 15px 0;
+
 }
 
 
@@ -770,6 +847,7 @@ nav a:hover {
     line-height: 1;
 
     margin-bottom: 10px;
+
 }
 
 
@@ -778,11 +856,12 @@ nav a:hover {
     font-size: 20px;
 
     font-weight: 500;
+
 }
 
 
 /* =========================================================
-   WEATHER RIGHT DETAILS
+   WEATHER RIGHT
 ========================================================= */
 
 .right {
@@ -821,7 +900,14 @@ nav a:hover {
 }
 
 
-.item span {
+.item span:first-child {
+
+    font-weight: 400;
+
+}
+
+
+.item span:last-child {
 
     font-weight: 600;
 
@@ -830,7 +916,7 @@ nav a:hover {
 
 
 /* =========================================================
-   SECTION COMMON
+   COMMON SECTION
 ========================================================= */
 
 section h2 {
@@ -840,6 +926,7 @@ section h2 {
     margin-bottom: 35px;
 
     font-size: 35px;
+
 }
 
 
@@ -897,6 +984,7 @@ section h2 {
 .alertCard h3 {
 
     margin-bottom: 8px;
+
 }
 
 
@@ -905,6 +993,7 @@ section h2 {
     line-height: 1.6;
 
     margin-bottom: 8px;
+
 }
 
 
@@ -929,6 +1018,7 @@ section h2 {
     grid-template-columns: repeat(4, 1fr);
 
     gap: 25px;
+
 }
 
 
@@ -938,6 +1028,8 @@ section h2 {
 
     padding: 35px;
 
+    min-height: 180px;
+
     border-radius: 20px;
 
     background: rgba(255, 255, 255, 0.15);
@@ -945,7 +1037,6 @@ section h2 {
     backdrop-filter: blur(18px);
 
     transition: 0.3s ease;
-
 }
 
 
@@ -953,12 +1044,21 @@ section h2 {
 
     transform: translateY(-8px);
 
+    background: rgba(255, 255, 255, 0.20);
+}
+
+
+.highlight-icon {
+
+    font-size: 35px;
+
 }
 
 
 .card h3 {
 
     margin: 12px 0 8px;
+
 }
 
 
@@ -967,6 +1067,7 @@ section h2 {
     font-size: 20px;
 
     font-weight: 600;
+
 }
 
 
@@ -985,6 +1086,8 @@ section h2 {
 
 
 .hourContainer {
+
+    min-height: 180px;
 
     display: flex;
 
@@ -1012,6 +1115,7 @@ section h2 {
     transition: 0.3s ease;
 
     flex-shrink: 0;
+
 }
 
 
@@ -1020,6 +1124,7 @@ section h2 {
     transform: scale(1.05);
 
     background: rgba(255, 255, 255, 0.22);
+
 }
 
 
@@ -1032,6 +1137,7 @@ section h2 {
     object-fit: contain;
 
     margin: 10px 0;
+
 }
 
 
@@ -1042,6 +1148,7 @@ section h2 {
     font-weight: 600;
 
     margin: 8px 0;
+
 }
 
 
@@ -1052,6 +1159,7 @@ section h2 {
     min-height: 40px;
 
     line-height: 1.4;
+
 }
 
 
@@ -1062,6 +1170,7 @@ section h2 {
     font-size: 12px;
 
     color: #e8f7ff;
+
 }
 
 
@@ -1070,6 +1179,25 @@ section h2 {
     color: #ffdddd;
 
     font-weight: 600;
+
+}
+
+
+/* =========================================================
+   LOADING / NO DATA
+========================================================= */
+
+.loading-message,
+.no-data {
+
+    width: 100%;
+
+    text-align: center;
+
+    padding: 40px;
+
+    opacity: 0.8;
+
 }
 
 
@@ -1093,11 +1221,13 @@ section h2 {
 
     height: 450px;
 
+    min-height: 300px;
+
     border-radius: 20px;
 
     overflow: hidden;
 
-    background: rgba(255, 255, 255, 0.12);
+    background: #dce8ef;
 
     box-shadow:
         0 10px 30px rgba(0, 0, 0, 0.2);
@@ -1123,13 +1253,16 @@ section h2 {
     background: rgba(255, 255, 255, 0.15);
 
     backdrop-filter: blur(18px);
-
 }
 
 
-.chartSection h2 {
+.chartContainer {
 
-    margin-bottom: 25px;
+    position: relative;
+
+    width: 100%;
+
+    height: 400px;
 }
 
 
@@ -1137,7 +1270,7 @@ section h2 {
 
     width: 100% !important;
 
-    height: 400px !important;
+    height: 100% !important;
 
     display: block;
 }
@@ -1157,15 +1290,23 @@ section h2 {
 }
 
 
+.tableContainer {
+
+    width: 100%;
+
+    overflow-x: auto;
+
+    border-radius: 20px;
+}
+
+
 table {
 
     width: 100%;
 
+    min-width: 650px;
+
     border-collapse: collapse;
-
-    overflow: hidden;
-
-    border-radius: 20px;
 
     background: rgba(255, 255, 255, 0.15);
 }
@@ -1176,6 +1317,7 @@ th {
     background: rgba(255, 255, 255, 0.20);
 
     font-weight: 600;
+
 }
 
 
@@ -1186,7 +1328,8 @@ td {
 
     text-align: center;
 
-    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+    border-bottom:
+        1px solid rgba(255, 255, 255, 0.10);
 }
 
 
@@ -1201,12 +1344,14 @@ td img {
 tr:last-child td {
 
     border-bottom: none;
+
 }
 
 
 tr:hover {
 
     background: rgba(255, 255, 255, 0.08);
+
 }
 
 
@@ -1233,6 +1378,7 @@ tr:hover {
     flex-wrap: wrap;
 
     justify-content: center;
+
 }
 
 
@@ -1287,6 +1433,7 @@ footer {
 footer h3 {
 
     font-size: 24px;
+
 }
 
 
@@ -1295,6 +1442,16 @@ footer p {
     margin-top: 10px;
 
     opacity: 0.9;
+
+}
+
+
+.footer-small {
+
+    font-size: 13px;
+
+    opacity: 0.7 !important;
+
 }
 
 
@@ -1314,6 +1471,7 @@ footer p {
 ::-webkit-scrollbar-track {
 
     background: rgba(255, 255, 255, 0.08);
+
 }
 
 
@@ -1322,17 +1480,19 @@ footer p {
     background: rgba(255, 255, 255, 0.7);
 
     border-radius: 10px;
+
 }
 
 
 ::-webkit-scrollbar-thumb:hover {
 
     background: white;
+
 }
 
 
 /* =========================================================
-   RESPONSIVE - TABLET
+   RESPONSIVE - 1100px
 ========================================================= */
 
 @media (max-width: 1100px) {
@@ -1359,8 +1519,6 @@ footer p {
 
 
     .suggestions {
-
-        left: calc(50% - 430px);
 
         width: 350px;
 
@@ -1429,7 +1587,7 @@ footer p {
 
 
 /* =========================================================
-   RESPONSIVE - MOBILE
+   RESPONSIVE - 768px
 ========================================================= */
 
 @media (max-width: 768px) {
@@ -1506,10 +1664,7 @@ footer p {
     }
 
 
-    /*
-       On mobile the dropdown has the same
-       width as the input.
-    */
+    /* Mobile autocomplete */
 
     .suggestions {
 
@@ -1570,9 +1725,9 @@ footer p {
     }
 
 
-    #temperatureChart {
+    .chartContainer {
 
-        height: 300px !important;
+        height: 300px;
 
     }
 
@@ -1602,7 +1757,7 @@ footer p {
 
 
 /* =========================================================
-   RESPONSIVE - SMALL MOBILE
+   RESPONSIVE - 500px
 ========================================================= */
 
 @media (max-width: 500px) {
@@ -1699,17 +1854,186 @@ footer p {
     }
 
 
-    .weekly {
+    .chartContainer {
 
-        overflow-x: auto;
+        height: 270px;
+
+    }
+
+}
+
+
+/* =========================================================
+   DARK THEME SUPPORT
+========================================================= */
+
+body.dark-theme {
+
+    background:
+        linear-gradient(
+            135deg,
+            #080d1c,
+            #101a33,
+            #172642,
+            #0b1728
+        );
+
+    color: #f5f5f5;
+}
+
+
+body.dark-theme .search-box input {
+
+    background: #ffffff;
+
+    color: #222;
+
+}
+
+
+body.dark-theme .card,
+body.dark-theme .weatherCard,
+body.dark-theme .searchHistory,
+body.dark-theme .chartSection,
+body.dark-theme .alertCard,
+body.dark-theme .hourCard {
+
+    background: rgba(255, 255, 255, 0.08);
+
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+========================================================= */
+
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+
+    outline: 3px solid #ffe66d;
+
+    outline-offset: 3px;
+
+}
+
+
+/* =========================================================
+   PRINT
+========================================================= */
+
+@media print {
+
+    nav,
+    .search-box,
+    .favorites,
+    footer {
+
+        display: none;
 
     }
 
 
-    table {
+    body {
 
-        min-width: 650px;
+        background: white;
+
+        color: black;
 
     }
+
+
+    .weatherCard,
+    .card,
+    .hourCard,
+    .chartSection {
+
+        background: white;
+
+        color: black;
+
+        box-shadow: none;
+
+    }
+
+}
+
+/* =========================================================
+   FAVORITE CITY CARDS
+========================================================= */
+
+.favoriteCard {
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 15px;
+
+    min-width: 220px;
+
+    padding: 15px 18px;
+
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, 0.15);
+
+    backdrop-filter: blur(15px);
+
+    -webkit-backdrop-filter: blur(15px);
+
+    cursor: pointer;
+
+    transition: all 0.3s ease;
+
+}
+
+
+.favoriteCard:hover {
+
+    transform: translateY(-5px);
+
+    background: rgba(255, 255, 255, 0.25);
+
+}
+
+
+.favoriteCity {
+
+    font-weight: 600;
+
+    font-size: 15px;
+
+}
+
+
+.favoriteDelete {
+
+    width: 35px;
+
+    height: 35px;
+
+    border: none;
+
+    border-radius: 50%;
+
+    background: rgba(255, 255, 255, 0.15);
+
+    cursor: pointer;
+
+    font-size: 14px;
+
+    transition: all 0.3s ease;
+
+}
+
+
+.favoriteDelete:hover {
+
+    background: rgba(220, 53, 69, 0.8);
+
+    transform: scale(1.1);
 
 }

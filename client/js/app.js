@@ -6,6 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     console.log("WeatherSphere application started.");
 
+
     // =========================================================
     // DOM ELEMENT CHECK
     // =========================================================
@@ -22,11 +23,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // AUTOCOMPLETE ELEMENT
+    // AUTOCOMPLETE
     // =========================================================
 
-    const suggestions =
+    const suggestionsBox =
         document.getElementById("suggestions");
+
+    let autocompleteTimer = null;
 
 
     // =========================================================
@@ -35,38 +38,59 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function hideSuggestions() {
 
-        if (suggestions) {
-
-            suggestions.innerHTML = "";
-            suggestions.style.display = "none";
-
+        if (!suggestionsBox) {
+            return;
         }
+
+        suggestionsBox.innerHTML = "";
+        suggestionsBox.style.display = "none";
 
     }
 
 
     // =========================================================
-    // SHOW SUGGESTIONS
+    // ESCAPE HTML
+    // =========================================================
+
+    function escapeHTML(value) {
+
+        const div =
+            document.createElement("div");
+
+        div.textContent =
+            value || "";
+
+        return div.innerHTML;
+
+    }
+
+
+    // =========================================================
+    // SHOW AUTOCOMPLETE SUGGESTIONS
     // =========================================================
 
     function showSuggestions(locations) {
 
-        if (!suggestions) {
+        if (!suggestionsBox) {
             return;
         }
 
-        suggestions.innerHTML = "";
+        suggestionsBox.innerHTML = "";
 
 
-        if (!locations || locations.length === 0) {
+        if (
+            !Array.isArray(locations) ||
+            locations.length === 0
+        ) {
 
-            suggestions.style.display = "none";
+            hideSuggestions();
 
             return;
+
         }
 
 
-        // Maximum number of suggestions
+        // Show maximum 10 results
         const limitedLocations =
             locations.slice(0, 10);
 
@@ -77,30 +101,77 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.createElement("div");
 
 
-            item.className = "suggestion";
+            item.className =
+                "suggestion";
 
 
-            // Determine location type
-            let locationType = "Location";
+            // =================================================
+            // LOCATION INFORMATION
+            // =================================================
+
+            const name =
+                location.name || "Unknown";
+
+            const region =
+                location.region || "";
+
+            const country =
+                location.country || "";
+
+            const district =
+                location.district || "";
 
 
-            if (
-                location.region &&
-                location.region !== location.name
-            ) {
+            /*
+             * WeatherAPI search results normally provide:
+             *
+             * name
+             * region
+             * country
+             * lat
+             * lon
+             *
+             * Some locations may also provide district-level
+             * information.
+             */
 
-                locationType =
-                    `${location.region}, ${location.country}`;
+
+            let locationDetails = "";
+
+
+            if (district) {
+
+                locationDetails =
+                    `${district}, ${region}, ${country}`;
+
+            }
+
+            else if (region) {
+
+                locationDetails =
+                    `${region}, ${country}`;
 
             }
 
             else {
 
-                locationType =
-                    location.country;
+                locationDetails =
+                    country;
 
             }
 
+
+            // Remove duplicate commas
+            locationDetails =
+                locationDetails
+                    .replace(/,\s*,/g, ",")
+                    .replace(/^,\s*/, "")
+                    .replace(/,\s*$/, "");
+
+
+            // =================================================
+            // SUGGESTION HTML
+            // =================================================
 
             item.innerHTML = `
 
@@ -109,14 +180,16 @@ document.addEventListener("DOMContentLoaded", () => {
                     <i class="fa-solid fa-location-dot"></i>
 
                     <strong>
-                        ${location.name}
+                        ${escapeHTML(name)}
                     </strong>
 
                 </div>
 
-                <small>
-                    ${locationType}
-                </small>
+                <div class="suggestion-location">
+
+                    ${escapeHTML(locationDetails)}
+
+                </div>
 
             `;
 
@@ -128,141 +201,211 @@ document.addEventListener("DOMContentLoaded", () => {
             item.addEventListener("click", () => {
 
                 cityInput.value =
-                    location.name;
+                    name;
+
 
                 hideSuggestions();
 
-                getWeather(
-                    `${location.lat},${location.lon}`
-                );
+
+                /*
+                 * Use latitude and longitude when available.
+                 * This makes locations with the same name
+                 * much more accurate.
+                 */
+
+                if (
+                    location.lat !== undefined &&
+                    location.lon !== undefined
+                ) {
+
+                    getWeather(
+                        `${location.lat},${location.lon}`
+                    );
+
+                }
+
+                else {
+
+                    getWeather(name);
+
+                }
 
             });
 
 
-            suggestions.appendChild(item);
+            suggestionsBox.appendChild(item);
 
         });
 
 
-        suggestions.style.display = "block";
+        suggestionsBox.style.display =
+            "block";
 
     }
 
 
     // =========================================================
-    // AUTOCOMPLETE SEARCH
+    // GET LOCATION SUGGESTIONS
     // =========================================================
 
-    let autocompleteTimer;
+    async function getLocationSuggestions(query) {
+
+        try {
+
+            const response =
+                await fetch(
+                    `https://api.weatherapi.com/v1/search.json?key=${API_KEY}&q=${encodeURIComponent(query)}`
+                );
 
 
-    cityInput.addEventListener("input", () => {
+            if (!response.ok) {
 
-        const query =
-            cityInput.value.trim();
+                throw new Error(
+                    `Autocomplete request failed: ${response.status}`
+                );
+
+            }
 
 
-        // Clear previous timer
-        clearTimeout(autocompleteTimer);
+            const locations =
+                await response.json();
 
 
-        // Hide if input is empty
-        if (query.length === 0) {
+            showSuggestions(locations);
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "Autocomplete Error:",
+                error
+            );
 
             hideSuggestions();
 
-            return;
-
         }
 
-
-        /*
-         * Wait for a short time before sending request.
-         * This prevents an API request for every single
-         * keyboard character.
-         */
-
-        autocompleteTimer =
-            setTimeout(async () => {
-
-                try {
-
-                    const response =
-                        await fetch(
-                            `https://api.weatherapi.com/v1/search.json?key=${API_KEY}&q=${encodeURIComponent(query)}`
-                        );
-
-
-                    if (!response.ok) {
-
-                        throw new Error(
-                            "Autocomplete request failed."
-                        );
-
-                    }
-
-
-                    const locations =
-                        await response.json();
-
-
-                    showSuggestions(locations);
-
-                }
-
-                catch (error) {
-
-                    console.error(
-                        "Autocomplete Error:",
-                        error
-                    );
-
-                    hideSuggestions();
-
-                }
-
-            }, 300);
-
-    });
+    }
 
 
     // =========================================================
-    // SEARCH WEATHER
-    // =========================================================
-
-    searchBtn.addEventListener("click", () => {
-
-        const city =
-            cityInput.value.trim();
-
-
-        if (city === "") {
-
-            alert(
-                "Please enter a city name."
-            );
-
-            cityInput.focus();
-
-            return;
-
-        }
-
-
-        hideSuggestions();
-
-        getWeather(city);
-
-    });
-
-
-    // =========================================================
-    // SEARCH USING ENTER KEY
+    // USER TYPES IN SEARCH BOX
     // =========================================================
 
     cityInput.addEventListener(
-        "keypress",
+        "input",
+        () => {
+
+            const query =
+                cityInput.value.trim();
+
+
+            clearTimeout(
+                autocompleteTimer
+            );
+
+
+            // Hide dropdown when empty
+            if (query.length === 0) {
+
+                hideSuggestions();
+
+                return;
+
+            }
+
+
+            /*
+             * Wait 300ms before making API request.
+             *
+             * This prevents sending a request for every
+             * single keyboard character.
+             */
+
+            autocompleteTimer =
+                setTimeout(() => {
+
+                    getLocationSuggestions(
+                        query
+                    );
+
+                }, 300);
+
+        }
+    );
+
+
+    // =========================================================
+    // SEARCH BUTTON
+    // =========================================================
+
+    searchBtn.addEventListener(
+        "click",
+        () => {
+
+            const city =
+                cityInput.value.trim();
+
+
+            if (city === "") {
+
+                alert(
+                    "Please enter a city name."
+                );
+
+                cityInput.focus();
+
+                return;
+
+            }
+
+
+            hideSuggestions();
+
+            getWeather(city);
+
+        }
+    );
+
+
+    // =========================================================
+    // ENTER KEY SEARCH
+    // =========================================================
+
+    cityInput.addEventListener(
+        "keydown",
         (event) => {
+
+            /*
+             * If autocomplete suggestions are visible,
+             * Enter should select the first suggestion.
+             */
+
+            if (
+                event.key === "Enter" &&
+                suggestionsBox &&
+                suggestionsBox.style.display === "block"
+            ) {
+
+                const firstSuggestion =
+                    suggestionsBox.querySelector(
+                        ".suggestion"
+                    );
+
+
+                if (firstSuggestion) {
+
+                    event.preventDefault();
+
+                    firstSuggestion.click();
+
+                    return;
+
+                }
+
+            }
+
 
             if (event.key === "Enter") {
 
@@ -295,7 +438,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // CLOSE DROPDOWN WHEN CLICKING OUTSIDE
+    // CLOSE SUGGESTIONS WHEN CLICKING OUTSIDE
     // =========================================================
 
     document.addEventListener(
@@ -334,7 +477,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
                 // Check browser support
-                if (!navigator.geolocation) {
+                if (
+                    !navigator.geolocation
+                ) {
 
                     alert(
                         "Geolocation is not supported by your browser."
@@ -349,20 +494,25 @@ document.addEventListener("DOMContentLoaded", () => {
                     locationBtn.innerHTML;
 
 
+                // Loading state
                 locationBtn.innerHTML = `
+
                     <i class="fa-solid fa-spinner fa-spin"></i>
+
                     Getting Location...
+
                 `;
 
 
-                locationBtn.disabled = true;
+                locationBtn.disabled =
+                    true;
 
 
                 navigator.geolocation.getCurrentPosition(
 
-                    // =========================================
+                    // =================================================
                     // SUCCESS
-                    // =========================================
+                    // =================================================
 
                     (position) => {
 
@@ -396,9 +546,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     },
 
 
-                    // =========================================
+                    // =================================================
                     // ERROR
-                    // =========================================
+                    // =================================================
 
                     (error) => {
 
@@ -412,21 +562,30 @@ document.addEventListener("DOMContentLoaded", () => {
                             "Unable to get your current location.";
 
 
-                        if (error.code === 1) {
+                        if (
+                            error.code ===
+                            error.PERMISSION_DENIED
+                        ) {
 
                             message =
                                 "Location permission was denied. Please allow location access.";
 
                         }
 
-                        else if (error.code === 2) {
+                        else if (
+                            error.code ===
+                            error.POSITION_UNAVAILABLE
+                        ) {
 
                             message =
                                 "Your location could not be determined.";
 
                         }
 
-                        else if (error.code === 3) {
+                        else if (
+                            error.code ===
+                            error.TIMEOUT
+                        ) {
 
                             message =
                                 "Location request timed out.";
@@ -444,6 +603,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         locationBtn.disabled =
                             false;
 
+                    },
+
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
                     }
 
                 );
@@ -476,7 +641,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         : "";
 
 
-                // Check for empty/default value
                 if (
                     city === "" ||
                     city === "--"
@@ -608,32 +772,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
     /*
      * Load Pune automatically when the website opens.
+     *
+     * This ensures that the page doesn't look empty
+     * when the user opens it for the first time.
      */
 
-    setTimeout(() => {
+    setTimeout(
+        () => {
 
-        if (
-            typeof getWeather ===
-            "function"
-        ) {
+            if (
+                typeof getWeather ===
+                "function"
+            ) {
 
-            console.log(
-                "Loading default weather: Pune"
-            );
+                console.log(
+                    "Loading default weather: Pune"
+                );
 
 
-            getWeather("Pune");
+                getWeather("Pune");
 
-        }
+            }
 
-        else {
+            else {
 
-            console.error(
-                "getWeather() function not found."
-            );
+                console.error(
+                    "getWeather() function not found."
+                );
 
-        }
+            }
 
-    }, 300);
+        },
+        300
+    );
 
 });

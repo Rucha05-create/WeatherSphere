@@ -1,7 +1,20 @@
 // ============================================================
-// WEATHERSPHERE
-// AUTOCOMPLETE / CITY SEARCH SUGGESTIONS
+// WEATHERSPHERE - AUTOCOMPLETE.JS
 // ============================================================
+// Handles:
+// 1. Live location suggestions while typing
+// 2. City / village / district / state / country display
+// 3. Debounced search requests
+// 4. Backend API support
+// 5. WeatherAPI fallback
+// 6. Keyboard navigation
+// 7. Mouse selection
+// 8. Exact latitude/longitude search
+// 9. Safe HTML rendering
+// 10. Closing dropdown when clicking outside
+// 11. Request cancellation to prevent stale results
+// ============================================================
+
 
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -17,17 +30,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // SAFETY CHECK
+    // CHECK REQUIRED ELEMENTS
     // =========================================================
 
-    if (!input || !suggestionsBox) {
+    if (!input) {
 
         console.error(
-            "Autocomplete elements not found."
+            "WeatherSphere Autocomplete: cityInput not found."
         );
 
         return;
+    }
 
+
+    if (!suggestionsBox) {
+
+        console.error(
+            "WeatherSphere Autocomplete: suggestions container not found."
+        );
+
+        return;
     }
 
 
@@ -39,29 +61,233 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let selectedIndex = -1;
 
-    let currentResults = [];
+    let currentLocations = [];
+
+    let abortController = null;
+
+    let requestId = 0;
 
 
     // =========================================================
-    // WHEN USER TYPES
+    // BACKEND URL
     // =========================================================
 
-    input.addEventListener("input", () => {
-
-        const query =
-            input.value.trim();
+    const BACKEND_URL =
+        "http://localhost:5000";
 
 
-        // Reset selected item
+    // =========================================================
+    // HIDE SUGGESTIONS
+    // =========================================================
+
+    function hideSuggestions() {
+
+        suggestionsBox.innerHTML = "";
+
+        suggestionsBox.style.display = "none";
+
+        suggestionsBox.classList.remove("show");
+
+        selectedIndex = -1;
+
+        currentLocations = [];
+
+    }
+
+
+    // =========================================================
+    // SHOW SUGGESTIONS
+    // =========================================================
+
+    function displaySuggestions() {
+
+        suggestionsBox.style.display = "block";
+
+        suggestionsBox.classList.add("show");
+
+    }
+
+
+    // =========================================================
+    // ESCAPE HTML
+    // =========================================================
+    // Prevents API data from being inserted as HTML.
+    // =========================================================
+
+    function escapeHTML(value) {
+
+        const div =
+            document.createElement("div");
+
+        div.textContent =
+            value ?? "";
+
+        return div.innerHTML;
+
+    }
+
+
+    // =========================================================
+    // NORMALIZE LOCATION
+    // =========================================================
+    // Makes different API response formats consistent.
+    // =========================================================
+
+    function normalizeLocation(location) {
+
+        if (!location) {
+            return null;
+        }
+
+
+        return {
+
+            name:
+                location.name ||
+                location.city ||
+                "Unknown Location",
+
+
+            district:
+                location.district ||
+                location.county ||
+                "",
+
+
+            region:
+                location.region ||
+                location.state ||
+                location.state_district ||
+                "",
+
+
+            country:
+                location.country ||
+                "",
+
+
+            lat:
+                location.lat ??
+                location.latitude ??
+                null,
+
+
+            lon:
+                location.lon ??
+                location.lng ??
+                location.longitude ??
+                null
+
+        };
+
+    }
+
+
+    // =========================================================
+    // CREATE LOCATION INFORMATION
+    // =========================================================
+
+    function getLocationDetails(location) {
+
+        const details =
+            normalizeLocation(location);
+
+
+        if (!details) {
+
+            return {
+
+                name: "Unknown Location",
+
+                district: "",
+
+                region: "",
+
+                country: "",
+
+                lat: null,
+
+                lon: null,
+
+                locationText: ""
+
+            };
+
+        }
+
+
+        const parts = [];
+
+
+        // -----------------------------------------------------
+        // District
+        // -----------------------------------------------------
+
+        if (details.district) {
+
+            parts.push(
+                details.district
+            );
+
+        }
+
+
+        // -----------------------------------------------------
+        // Region / State
+        // -----------------------------------------------------
+
+        if (
+            details.region &&
+            details.region !== details.district
+        ) {
+
+            parts.push(
+                details.region
+            );
+
+        }
+
+
+        // -----------------------------------------------------
+        // Country
+        // -----------------------------------------------------
+
+        if (details.country) {
+
+            parts.push(
+                details.country
+            );
+
+        }
+
+
+        return {
+
+            ...details,
+
+            locationText:
+                parts.join(", ")
+
+        };
+
+    }
+
+
+    // =========================================================
+    // SHOW SUGGESTIONS
+    // =========================================================
+
+    function showSuggestions(locations) {
+
+        suggestionsBox.innerHTML = "";
+
         selectedIndex = -1;
 
 
-        // Cancel previous request timer
-        clearTimeout(debounceTimer);
-
-
-        // Hide dropdown if empty
-        if (query.length === 0) {
+        if (
+            !Array.isArray(locations) ||
+            locations.length === 0
+        ) {
 
             hideSuggestions();
 
@@ -70,92 +296,685 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
 
-        /*
-         * Start searching after 300ms.
-         *
-         * This prevents sending an API request
-         * for every single keyboard character.
-         */
+        // -----------------------------------------------------
+        // Limit results to 10
+        // -----------------------------------------------------
 
-        debounceTimer =
-            setTimeout(() => {
+        const limitedLocations =
+            locations
+                .slice(0, 10)
+                .map(normalizeLocation)
+                .filter(Boolean);
 
-                getSuggestions(query);
 
-            }, 300);
+        // IMPORTANT:
+        // Keep currentLocations synchronized with what is
+        // actually displayed.
+        currentLocations =
+            limitedLocations;
 
-    });
+
+        if (currentLocations.length === 0) {
+
+            hideSuggestions();
+
+            return;
+
+        }
+
+
+        // =====================================================
+        // CREATE EACH SUGGESTION
+        // =====================================================
+
+        currentLocations.forEach(
+            (location, index) => {
+
+                const item =
+                    document.createElement("div");
+
+
+                item.className =
+                    "suggestion";
+
+
+                item.setAttribute(
+                    "role",
+                    "option"
+                );
+
+
+                item.setAttribute(
+                    "data-index",
+                    index
+                );
+
+
+                item.setAttribute(
+                    "aria-selected",
+                    "false"
+                );
+
+
+                // ------------------------------------------------
+                // LOCATION DETAILS
+                // ------------------------------------------------
+
+                const details =
+                    getLocationDetails(location);
+
+
+                // ------------------------------------------------
+                // TITLE
+                // ------------------------------------------------
+
+                const title =
+                    document.createElement("div");
+
+
+                title.className =
+                    "suggestion-title";
+
+
+                // Location icon
+
+                const icon =
+                    document.createElement("i");
+
+
+                icon.className =
+                    "fa-solid fa-location-dot";
+
+
+                // City name
+
+                const strong =
+                    document.createElement("strong");
+
+
+                strong.textContent =
+                    details.name;
+
+
+                title.appendChild(icon);
+
+                title.appendChild(strong);
+
+
+                // ------------------------------------------------
+                // LOCATION INFORMATION
+                // ------------------------------------------------
+
+                const locationInfo =
+                    document.createElement("div");
+
+
+                locationInfo.className =
+                    "suggestion-location";
+
+
+                const locationParts = [];
+
+
+                if (details.district) {
+
+                    locationParts.push(
+                        details.district
+                    );
+
+                }
+
+
+                if (
+                    details.region &&
+                    details.region !== details.district
+                ) {
+
+                    locationParts.push(
+                        details.region
+                    );
+
+                }
+
+
+                if (details.country) {
+
+                    locationParts.push(
+                        details.country
+                    );
+
+                }
+
+
+                locationInfo.textContent =
+                    locationParts.join(" • ");
+
+
+                // ------------------------------------------------
+                // ADD TO ITEM
+                // ------------------------------------------------
+
+                item.appendChild(title);
+
+
+                if (locationParts.length > 0) {
+
+                    item.appendChild(
+                        locationInfo
+                    );
+
+                }
+
+
+                // =================================================
+                // MOUSE ENTER
+                // =================================================
+
+                item.addEventListener(
+                    "mouseenter",
+                    () => {
+
+                        selectedIndex =
+                            index;
+
+                        updateSelectedItem();
+
+                    }
+                );
+
+
+                // =================================================
+                // CLICK
+                // =================================================
+
+                item.addEventListener(
+                    "mousedown",
+                    (event) => {
+
+                        /*
+                         * Prevent blur event from hiding the
+                         * dropdown before the click happens.
+                         */
+
+                        event.preventDefault();
+
+                    }
+                );
+
+
+                item.addEventListener(
+                    "click",
+                    () => {
+
+                        selectLocation(
+                            location
+                        );
+
+                    }
+                );
+
+
+                suggestionsBox.appendChild(
+                    item
+                );
+
+            }
+        );
+
+
+        // -----------------------------------------------------
+        // Show dropdown
+        // -----------------------------------------------------
+
+        displaySuggestions();
+
+    }
 
 
     // =========================================================
-    // GET CITY SUGGESTIONS
+    // SELECT LOCATION
+    // =========================================================
+
+    function selectLocation(location) {
+
+        if (!location) {
+            return;
+        }
+
+
+        const details =
+            getLocationDetails(location);
+
+
+        // -----------------------------------------------------
+        // Set input value
+        // -----------------------------------------------------
+
+        input.value =
+            details.name;
+
+
+        // -----------------------------------------------------
+        // Close dropdown
+        // -----------------------------------------------------
+
+        hideSuggestions();
+
+
+        // -----------------------------------------------------
+        // Build search query
+        // -----------------------------------------------------
+
+        let searchQuery;
+
+
+        // =====================================================
+        // EXACT COORDINATES
+        // =====================================================
+
+        if (
+            details.lat !== null &&
+            details.lat !== undefined &&
+            details.lon !== null &&
+            details.lon !== undefined
+        ) {
+
+            searchQuery =
+                `${details.lat},${details.lon}`;
+
+        }
+
+
+        // =====================================================
+        // FALLBACK LOCATION QUERY
+        // =====================================================
+
+        else {
+
+            searchQuery = [
+
+                details.name,
+
+                details.district,
+
+                details.region,
+
+                details.country
+
+            ]
+                .filter(Boolean)
+                .join(", ");
+
+        }
+
+
+        // -----------------------------------------------------
+        // Search selected location
+        // -----------------------------------------------------
+
+        if (
+            typeof getWeather ===
+            "function"
+        ) {
+
+            getWeather(
+                searchQuery
+            );
+
+        }
+
+        else {
+
+            console.error(
+                "Autocomplete: getWeather() is not available."
+            );
+
+        }
+
+    }
+
+
+    // =========================================================
+    // UPDATE SELECTED ITEM
+    // =========================================================
+
+    function updateSelectedItem() {
+
+        const items =
+            suggestionsBox.querySelectorAll(
+                ".suggestion"
+            );
+
+
+        items.forEach(
+            (item, index) => {
+
+                const isSelected =
+                    index === selectedIndex;
+
+
+                item.classList.toggle(
+                    "suggestion-selected",
+                    isSelected
+                );
+
+
+                item.setAttribute(
+                    "aria-selected",
+                    isSelected
+                        ? "true"
+                        : "false"
+                );
+
+            }
+        );
+
+
+        // -----------------------------------------------------
+        // Scroll selected suggestion into view
+        // -----------------------------------------------------
+
+        if (
+            selectedIndex >= 0 &&
+            items[selectedIndex]
+        ) {
+
+            items[selectedIndex]
+                .scrollIntoView({
+                    block: "nearest"
+                });
+
+        }
+
+    }
+
+
+    // =========================================================
+    // FETCH SUGGESTIONS FROM BACKEND
+    // =========================================================
+
+    async function getBackendSuggestions(
+        query,
+        signal
+    ) {
+
+        /*
+         * Expected backend route:
+         *
+         * GET /api/search/:query
+         *
+         * Example:
+         *
+         * /api/search/Pune
+         */
+
+        const url =
+            `${BACKEND_URL}/api/search/${encodeURIComponent(query)}`;
+
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "GET",
+                    signal
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Backend search HTTP error: ${response.status}`
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        // -----------------------------------------------------
+        // Support multiple backend response formats
+        // -----------------------------------------------------
+
+        if (Array.isArray(data)) {
+
+            return data;
+
+        }
+
+
+        if (
+            data &&
+            Array.isArray(data.results)
+        ) {
+
+            return data.results;
+
+        }
+
+
+        if (
+            data &&
+            Array.isArray(data.locations)
+        ) {
+
+            return data.locations;
+
+        }
+
+
+        if (
+            data &&
+            Array.isArray(data.data)
+        ) {
+
+            return data.data;
+
+        }
+
+
+        return [];
+
+    }
+
+
+    // =========================================================
+    // FETCH SUGGESTIONS FROM WEATHERAPI
+    // =========================================================
+
+    async function getWeatherAPISuggestions(
+        query,
+        signal
+    ) {
+
+        // -----------------------------------------------------
+        // Check API key
+        // -----------------------------------------------------
+
+        if (
+            typeof API_KEY ===
+            "undefined" ||
+            !API_KEY
+        ) {
+
+            throw new Error(
+                "WeatherAPI key is missing."
+            );
+
+        }
+
+
+        const url =
+            `https://api.weatherapi.com/v1/search.json?key=${encodeURIComponent(API_KEY)}&q=${encodeURIComponent(query)}`;
+
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "GET",
+                    signal
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `WeatherAPI search HTTP error: ${response.status}`
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        if (!Array.isArray(data)) {
+
+            return [];
+
+        }
+
+
+        return data;
+
+    }
+
+
+    // =========================================================
+    // GET LOCATION SUGGESTIONS
     // =========================================================
 
     async function getSuggestions(query) {
 
+        const currentRequest =
+            ++requestId;
+
+
+        // -----------------------------------------------------
+        // Cancel previous request
+        // -----------------------------------------------------
+
+        if (abortController) {
+
+            abortController.abort();
+
+        }
+
+
+        abortController =
+            new AbortController();
+
+
+        const signal =
+            abortController.signal;
+
+
         try {
 
+            let locations = [];
+
+
             // =================================================
-            // WEATHER API SEARCH
+            // TRY BACKEND FIRST
             // =================================================
 
-            const url =
-                `https://api.weatherapi.com/v1/search.json?key=${API_KEY}&q=${encodeURIComponent(query)}`;
+            try {
+
+                locations =
+                    await getBackendSuggestions(
+                        query,
+                        signal
+                    );
 
 
-            const response =
-                await fetch(url);
+            }
+
+            catch (backendError) {
+
+                // Ignore cancellation
+
+                if (
+                    backendError.name ===
+                    "AbortError"
+                ) {
+
+                    return;
+
+                }
 
 
-            if (!response.ok) {
-
-                throw new Error(
-                    `WeatherAPI Error: ${response.status}`
+                console.warn(
+                    "Backend autocomplete unavailable. Trying WeatherAPI...",
+                    backendError.message
                 );
+
+
+                // =============================================
+                // FALLBACK TO WEATHERAPI
+                // =============================================
+
+                locations =
+                    await getWeatherAPISuggestions(
+                        query,
+                        signal
+                    );
 
             }
 
 
-            const results =
-                await response.json();
-
-
             // =================================================
-            // CHECK RESULTS
+            // MAKE SURE THIS IS STILL THE LATEST REQUEST
             // =================================================
 
             if (
-                !Array.isArray(results) ||
-                results.length === 0
+                currentRequest !== requestId
             ) {
-
-                hideSuggestions();
 
                 return;
 
             }
 
 
-            /*
-             * Store current results.
-             * Maximum 10 results are shown.
-             */
+            // -------------------------------------------------
+            // Make sure input hasn't changed
+            // -------------------------------------------------
 
-            currentResults =
-                results.slice(0, 10);
+            if (
+                input.value.trim() !== query
+            ) {
+
+                return;
+
+            }
 
 
             // =================================================
             // DISPLAY RESULTS
             // =================================================
 
-            await displaySuggestions(
-                currentResults
+            showSuggestions(
+                locations
             );
 
         }
 
         catch (error) {
+
+            if (
+                error.name ===
+                "AbortError"
+            ) {
+
+                return;
+
+            }
+
 
             console.error(
                 "Autocomplete error:",
@@ -171,511 +990,78 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // DISPLAY SUGGESTIONS
+    // INPUT EVENT
     // =========================================================
 
-    async function displaySuggestions(results) {
+    input.addEventListener(
+        "input",
+        () => {
 
-        // Clear previous results
-        suggestionsBox.innerHTML = "";
-
-
-        if (!results.length) {
-
-            hideSuggestions();
-
-            return;
-
-        }
+            const query =
+                input.value.trim();
 
 
-        // Show loading message
-        suggestionsBox.innerHTML = `
+            // -------------------------------------------------
+            // Cancel old debounce
+            // -------------------------------------------------
 
-            <div class="suggestion-loading">
-
-                <i class="fa-solid fa-spinner fa-spin"></i>
-
-                Finding locations...
-
-            </div>
-
-        `;
-
-
-        suggestionsBox.style.display =
-            "block";
-
-
-        // =====================================================
-        // GET DISTRICT INFORMATION
-        // =====================================================
-
-        const enrichedResults =
-            await Promise.all(
-
-                results.map(async (place) => {
-
-                    const district =
-                        await getDistrict(
-                            place.lat,
-                            place.lon
-                        );
-
-
-                    return {
-                        ...place,
-                        district: district
-                    };
-
-                })
-
+            clearTimeout(
+                debounceTimer
             );
 
 
-        // =====================================================
-        // CLEAR LOADING MESSAGE
-        // =====================================================
+            // -------------------------------------------------
+            // Reset keyboard navigation
+            // -------------------------------------------------
 
-        suggestionsBox.innerHTML = "";
+            selectedIndex = -1;
 
 
-        // =====================================================
-        // CREATE EACH SUGGESTION
-        // =====================================================
-
-        enrichedResults.forEach(
-            (place, index) => {
-
-                const suggestion =
-                    document.createElement("div");
-
-
-                suggestion.className =
-                    "suggestion";
-
-
-                suggestion.dataset.index =
-                    index;
-
-
-                // =================================================
-                // LOCATION INFORMATION
-                // =================================================
-
-                const name =
-                    place.name || "Unknown Location";
-
-
-                const region =
-                    place.region || "";
-
-
-                const country =
-                    place.country || "";
-
-
-                const district =
-                    place.district || "";
-
-
-                // =================================================
-                // BUILD LOCATION TEXT
-                // =================================================
-
-                let locationParts = [];
-
-
-                /*
-                 * District
-                 */
-
-                if (district) {
-
-                    locationParts.push(
-                        `${district} District`
-                    );
-
-                }
-
-
-                /*
-                 * State / Region
-                 */
-
-                if (region) {
-
-                    locationParts.push(
-                        region
-                    );
-
-                }
-
-
-                /*
-                 * Country
-                 */
-
-                if (country) {
-
-                    locationParts.push(
-                        country
-                    );
-
-                }
-
-
-                const locationText =
-                    locationParts.join(
-                        ", "
-                    );
-
-
-                // =================================================
-                // CREATE HTML
-                // =================================================
-
-                suggestion.innerHTML = `
-
-                    <div class="suggestion-main">
-
-                        <i class="fa-solid fa-location-dot"></i>
-
-                        <strong>
-                            ${escapeHTML(name)}
-                        </strong>
-
-                    </div>
-
-
-                    <div class="suggestion-location">
-
-                        ${
-                            locationText
-                                ? escapeHTML(locationText)
-                                : "Location"
-                        }
-
-                    </div>
-
-                `;
-
-
-                // =================================================
-                // CLICK EVENT
-                // =================================================
-
-                suggestion.addEventListener(
-                    "click",
-                    () => {
-
-                        selectLocation(
-                            place
-                        );
-
-                    }
-                );
-
-
-                // =================================================
-                // MOUSE ENTER
-                // =================================================
-
-                suggestion.addEventListener(
-                    "mouseenter",
-                    () => {
-
-                        selectedIndex =
-                            index;
-
-
-                        updateSelectedItem();
-
-                    }
-                );
-
-
-                suggestionsBox.appendChild(
-                    suggestion
-                );
-
-            }
-        );
-
-
-        // =====================================================
-        // SHOW DROPDOWN
-        // =====================================================
-
-        suggestionsBox.style.display =
-            "block";
-
-
-        // Reset keyboard selection
-        selectedIndex = -1;
-
-    }
-
-
-    // =========================================================
-    // GET DISTRICT USING OPENSTREETMAP
-    // =========================================================
-
-    async function getDistrict(
-        latitude,
-        longitude
-    ) {
-
-        try {
+            // =================================================
+            // EMPTY INPUT
+            // =================================================
 
             if (
-                latitude === undefined ||
-                longitude === undefined
-            ) {
-
-                return "";
-
-            }
-
-
-            const url =
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`;
-
-
-            const response =
-                await fetch(
-                    url,
-                    {
-                        headers: {
-                            "Accept":
-                                "application/json"
-                        }
-                    }
-                );
-
-
-            if (!response.ok) {
-
-                return "";
-
-            }
-
-
-            const data =
-                await response.json();
-
-
-            if (
-                !data ||
-                !data.address
-            ) {
-
-                return "";
-
-            }
-
-
-            const address =
-                data.address;
-
-
-            /*
-             * Nominatim may use different fields
-             * depending on the location.
-             *
-             * district may appear as:
-             *
-             * county
-             * district
-             * state_district
-             * municipality
-             */
-
-            const district =
-                address.county ||
-                address.district ||
-                address.state_district ||
-                address.municipality ||
-                "";
-
-
-            return cleanDistrictName(
-                district
-            );
-
-        }
-
-        catch (error) {
-
-            console.warn(
-                "District lookup failed:",
-                error
-            );
-
-
-            return "";
-
-        }
-
-    }
-
-
-    // =========================================================
-    // CLEAN DISTRICT NAME
-    // =========================================================
-
-    function cleanDistrictName(
-        district
-    ) {
-
-        if (!district) {
-
-            return "";
-
-        }
-
-
-        let cleaned =
-            district.trim();
-
-
-        /*
-         * Avoid duplicate "District".
-         */
-
-        cleaned =
-            cleaned.replace(
-                /\s+District$/i,
-                ""
-            );
-
-
-        /*
-         * Avoid common administrative
-         * suffixes when possible.
-         */
-
-        cleaned =
-            cleaned.replace(
-                /\s+district$/i,
-                ""
-            );
-
-
-        return cleaned;
-
-    }
-
-
-    // =========================================================
-    // SELECT LOCATION
-    // =========================================================
-
-    function selectLocation(
-        place
-    ) {
-
-        // =====================================================
-        // PUT LOCATION NAME INTO SEARCH BOX
-        // =====================================================
-
-        input.value =
-            place.name;
-
-
-        // =====================================================
-        // HIDE DROPDOWN
-        // =====================================================
-
-        hideSuggestions();
-
-
-        selectedIndex = -1;
-
-
-        // =====================================================
-        // SEARCH WEATHER
-        // =====================================================
-
-        if (
-            typeof getWeather ===
-            "function"
-        ) {
-
-            /*
-             * Use latitude + longitude.
-             *
-             * This is more accurate than searching
-             * only by the city name.
-             */
-
-            if (
-                place.lat !== undefined &&
-                place.lon !== undefined
-            ) {
-
-                getWeather(
-                    `${place.lat},${place.lon}`
-                );
-
-            }
-
-            else {
-
-                getWeather(
-                    place.name
-                );
-
-            }
-
-        }
-
-        else {
-
-            console.error(
-                "getWeather() function not found."
-            );
-
-        }
-
-    }
-
-
-    // =========================================================
-    // HIDE SUGGESTIONS
-    // =========================================================
-
-    function hideSuggestions() {
-
-        suggestionsBox.innerHTML = "";
-
-        suggestionsBox.style.display =
-            "none";
-
-
-        selectedIndex = -1;
-
-        currentResults = [];
-
-    }
-
-
-    // =========================================================
-    // CLOSE WHEN CLICKING OUTSIDE
-    // =========================================================
-
-    document.addEventListener(
-        "click",
-        (event) => {
-
-            if (
-                !input.contains(event.target) &&
-                !suggestionsBox.contains(event.target)
+                query.length === 0
             ) {
 
                 hideSuggestions();
 
+                return;
+
             }
+
+
+            // =================================================
+            // MINIMUM CHARACTERS
+            // =================================================
+
+            if (
+                query.length < 2
+            ) {
+
+                hideSuggestions();
+
+                return;
+
+            }
+
+
+            // =================================================
+            // DEBOUNCE
+            // =================================================
+
+            debounceTimer =
+                setTimeout(
+                    () => {
+
+                        getSuggestions(
+                            query
+                        );
+
+                    },
+                    350
+                );
 
         }
     );
@@ -695,7 +1081,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
 
 
-            if (!items.length) {
+            const dropdownVisible =
+                suggestionsBox.style.display !==
+                "none";
+
+
+            // -------------------------------------------------
+            // No suggestions
+            // -------------------------------------------------
+
+            if (
+                !items.length ||
+                !dropdownVisible
+            ) {
 
                 return;
 
@@ -770,16 +1168,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (
                     selectedIndex >= 0 &&
-                    selectedIndex < currentResults.length
+                    selectedIndex < items.length
                 ) {
 
                     event.preventDefault();
 
 
-                    selectLocation(
-                        currentResults[
+                    const location =
+                        currentLocations[
                             selectedIndex
-                        ]
+                        ];
+
+
+                    selectLocation(
+                        location
                     );
 
                 }
@@ -795,6 +1197,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 event.key === "Escape"
             ) {
 
+                event.preventDefault();
+
                 hideSuggestions();
 
             }
@@ -804,71 +1208,112 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // UPDATE SELECTED ITEM
+    // CLOSE WHEN CLICKING OUTSIDE
     // =========================================================
 
-    function updateSelectedItem() {
+    document.addEventListener(
+        "click",
+        (event) => {
 
-        const items =
-            suggestionsBox.querySelectorAll(
-                ".suggestion"
-            );
-
-
-        items.forEach(
-            (item, index) => {
-
-                item.classList.remove(
-                    "suggestion-selected"
+            const searchBox =
+                event.target.closest(
+                    ".search-box"
                 );
 
 
-                if (
-                    index === selectedIndex
-                ) {
+            if (!searchBox) {
 
-                    item.classList.add(
-                        "suggestion-selected"
-                    );
-
-
-                    /*
-                     * Keep selected result visible
-                     * when navigating with keyboard.
-                     */
-
-                    item.scrollIntoView({
-                        block: "nearest"
-                    });
-
-                }
+                hideSuggestions();
 
             }
-        );
 
-    }
+        }
+    );
 
 
     // =========================================================
-    // ESCAPE HTML
+    // INPUT BLUR
     // =========================================================
 
-    function escapeHTML(
-        value
-    ) {
+    input.addEventListener(
+        "blur",
+        () => {
 
-        const div =
-            document.createElement(
-                "div"
+            /*
+             * Delay allows the suggestion click event to
+             * execute before the dropdown disappears.
+             */
+
+            setTimeout(
+                () => {
+
+                    if (
+                        !suggestionsBox.matches(
+                            ":hover"
+                        ) &&
+                        document.activeElement !==
+                        input
+                    ) {
+
+                        hideSuggestions();
+
+                    }
+
+                },
+                200
             );
 
+        }
+    );
 
-        div.textContent =
-            value || "";
+
+    // =========================================================
+    // PUBLIC FUNCTION
+    // =========================================================
+
+    /*
+     * Allows app.js or other files to close the dropdown.
+     */
+
+    window.hideWeatherSuggestions =
+        hideSuggestions;
 
 
-        return div.innerHTML;
+    // =========================================================
+    // PUBLIC SEARCH FUNCTION
+    // =========================================================
 
-    }
+    /*
+     * Useful if another JavaScript file wants to manually
+     * trigger autocomplete.
+     */
+
+    window.refreshWeatherSuggestions =
+        function () {
+
+            const query =
+                input.value.trim();
+
+
+            if (
+                query.length >= 2
+            ) {
+
+                getSuggestions(
+                    query
+                );
+
+            }
+
+        };
+
+
+    // =========================================================
+    // INITIALIZATION MESSAGE
+    // =========================================================
+
+    console.log(
+        "WeatherSphere - Autocomplete initialized successfully."
+    );
 
 });
