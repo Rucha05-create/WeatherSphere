@@ -2,17 +2,17 @@
 // WEATHERSPHERE - AUTOCOMPLETE.JS
 // ============================================================
 // Handles:
-// 1. Live location suggestions while typing
+// 1. Live location suggestions
 // 2. City / village / district / state / country display
-// 3. Debounced search requests
-// 4. Backend API support
-// 5. WeatherAPI fallback
-// 6. Keyboard navigation
-// 7. Mouse selection
-// 8. Exact latitude/longitude search
+// 3. Debounced backend requests
+// 4. WeatherAPI fallback
+// 5. Keyboard navigation
+// 6. Mouse selection
+// 7. Exact latitude/longitude search
+// 8. Location disambiguation
 // 9. Safe HTML rendering
-// 10. Closing dropdown when clicking outside
-// 11. Request cancellation to prevent stale results
+// 10. Closing dropdown
+// 11. Request cancellation
 // ============================================================
 
 
@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         return;
+
     }
 
 
@@ -50,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
         return;
+
     }
 
 
@@ -111,8 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
     // =========================================================
     // ESCAPE HTML
     // =========================================================
-    // Prevents API data from being inserted as HTML.
-    // =========================================================
 
     function escapeHTML(value) {
 
@@ -130,14 +130,29 @@ document.addEventListener("DOMContentLoaded", () => {
     // =========================================================
     // NORMALIZE LOCATION
     // =========================================================
-    // Makes different API response formats consistent.
+    // Converts backend / WeatherAPI responses into one format.
     // =========================================================
 
     function normalizeLocation(location) {
 
         if (!location) {
+
             return null;
+
         }
+
+
+        const latitude =
+            location.lat ??
+            location.latitude ??
+            null;
+
+
+        const longitude =
+            location.lon ??
+            location.lng ??
+            location.longitude ??
+            null;
 
 
         return {
@@ -151,6 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
             district:
                 location.district ||
                 location.county ||
+                location.district_name ||
                 "",
 
 
@@ -167,16 +183,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             lat:
-                location.lat ??
-                location.latitude ??
-                null,
+                latitude !== null
+                    ? Number(latitude)
+                    : null,
 
 
             lon:
-                location.lon ??
-                location.lng ??
-                location.longitude ??
-                null
+                longitude !== null
+                    ? Number(longitude)
+                    : null
 
         };
 
@@ -184,7 +199,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // CREATE LOCATION INFORMATION
+    // CREATE LOCATION DETAILS
     // =========================================================
 
     function getLocationDetails(location) {
@@ -220,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // -----------------------------------------------------
-        // District
+        // DISTRICT
         // -----------------------------------------------------
 
         if (details.district) {
@@ -233,7 +248,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // -----------------------------------------------------
-        // Region / State
+        // STATE / REGION
         // -----------------------------------------------------
 
         if (
@@ -249,7 +264,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // -----------------------------------------------------
-        // Country
+        // COUNTRY
         // -----------------------------------------------------
 
         if (details.country) {
@@ -266,9 +281,57 @@ document.addEventListener("DOMContentLoaded", () => {
             ...details,
 
             locationText:
-                parts.join(", ")
+                parts.join(" • ")
 
         };
+
+    }
+
+
+    // =========================================================
+    // BUILD LOCATION QUERY
+    // =========================================================
+    // Used only when coordinates are unavailable.
+    // =========================================================
+
+    function buildLocationQuery(details) {
+
+        return [
+
+            details.name,
+
+            details.district,
+
+            details.region,
+
+            details.country
+
+        ]
+            .filter(Boolean)
+            .join(", ");
+
+    }
+
+
+    // =========================================================
+    // CHECK VALID COORDINATES
+    // =========================================================
+
+    function hasCoordinates(location) {
+
+        return (
+
+            location &&
+
+            Number.isFinite(
+                Number(location.lat)
+            ) &&
+
+            Number.isFinite(
+                Number(location.lon)
+            )
+
+        );
 
     }
 
@@ -297,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // -----------------------------------------------------
-        // Limit results to 10
+        // Normalize and limit results
         // -----------------------------------------------------
 
         const limitedLocations =
@@ -307,14 +370,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 .filter(Boolean);
 
 
-        // IMPORTANT:
-        // Keep currentLocations synchronized with what is
-        // actually displayed.
         currentLocations =
             limitedLocations;
 
 
-        if (currentLocations.length === 0) {
+        if (
+            currentLocations.length === 0
+        ) {
 
             hideSuggestions();
 
@@ -324,11 +386,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // =====================================================
-        // CREATE EACH SUGGESTION
+        // CREATE SUGGESTION CARDS
         // =====================================================
 
         currentLocations.forEach(
             (location, index) => {
+
+                const details =
+                    getLocationDetails(location);
+
 
                 const item =
                     document.createElement("div");
@@ -356,17 +422,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 );
 
 
-                // ------------------------------------------------
-                // LOCATION DETAILS
-                // ------------------------------------------------
-
-                const details =
-                    getLocationDetails(location);
-
-
-                // ------------------------------------------------
+                // =================================================
                 // TITLE
-                // ------------------------------------------------
+                // =================================================
 
                 const title =
                     document.createElement("div");
@@ -376,8 +434,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     "suggestion-title";
 
 
-                // Location icon
-
                 const icon =
                     document.createElement("i");
 
@@ -385,8 +441,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 icon.className =
                     "fa-solid fa-location-dot";
 
-
-                // City name
 
                 const strong =
                     document.createElement("strong");
@@ -401,9 +455,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 title.appendChild(strong);
 
 
-                // ------------------------------------------------
+                // =================================================
                 // LOCATION INFORMATION
-                // ------------------------------------------------
+                // =================================================
 
                 const locationInfo =
                     document.createElement("div");
@@ -450,20 +504,58 @@ document.addEventListener("DOMContentLoaded", () => {
                     locationParts.join(" • ");
 
 
-                // ------------------------------------------------
-                // ADD TO ITEM
-                // ------------------------------------------------
+                // =================================================
+                // COORDINATES
+                // =================================================
+                // This is especially useful when two locations
+                // have similar or identical names.
+                // =================================================
+
+                const coordinates =
+                    document.createElement("small");
+
+
+                coordinates.className =
+                    "suggestion-coordinates";
+
+
+                if (hasCoordinates(location)) {
+
+                    coordinates.textContent =
+                        `📍 ${Number(location.lat).toFixed(4)}, ` +
+                        `${Number(location.lon).toFixed(4)}`;
+
+                }
+
+                else {
+
+                    coordinates.textContent =
+                        "📍 Coordinates unavailable";
+
+                }
+
+
+                // =================================================
+                // APPEND CONTENT
+                // =================================================
 
                 item.appendChild(title);
 
 
-                if (locationParts.length > 0) {
+                if (
+                    locationParts.length > 0
+                ) {
 
                     item.appendChild(
                         locationInfo
                     );
 
                 }
+
+
+                item.appendChild(
+                    coordinates
+                );
 
 
                 // =================================================
@@ -484,23 +576,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
                 // =================================================
-                // CLICK
+                // PREVENT BLUR
                 // =================================================
 
                 item.addEventListener(
                     "mousedown",
                     (event) => {
 
-                        /*
-                         * Prevent blur event from hiding the
-                         * dropdown before the click happens.
-                         */
-
                         event.preventDefault();
 
                     }
                 );
 
+
+                // =================================================
+                // CLICK
+                // =================================================
 
                 item.addEventListener(
                     "click",
@@ -522,9 +613,9 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
 
-        // -----------------------------------------------------
-        // Show dropdown
-        // -----------------------------------------------------
+        // =====================================================
+        // DISPLAY DROPDOWN
+        // =====================================================
 
         displaySuggestions();
 
@@ -538,7 +629,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function selectLocation(location) {
 
         if (!location) {
+
             return;
+
         }
 
 
@@ -546,71 +639,100 @@ document.addEventListener("DOMContentLoaded", () => {
             getLocationDetails(location);
 
 
-        // -----------------------------------------------------
-        // Set input value
-        // -----------------------------------------------------
+        // =====================================================
+        // SET INPUT
+        // =====================================================
 
         input.value =
             details.name;
 
 
-        // -----------------------------------------------------
-        // Close dropdown
-        // -----------------------------------------------------
+        // =====================================================
+        // CLOSE DROPDOWN
+        // =====================================================
 
         hideSuggestions();
 
 
-        // -----------------------------------------------------
-        // Build search query
-        // -----------------------------------------------------
-
-        let searchQuery;
-
-
         // =====================================================
-        // EXACT COORDINATES
+        // EXACT COORDINATE SEARCH
+        // =====================================================
+        // IMPORTANT:
+        //
+        // We do NOT search only by city name.
+        //
+        // If there are two similar locations such as:
+        //
+        // Jalgaon
+        // Jalgaon Jamod
+        //
+        // or two locations with the same name,
+        // latitude + longitude identify the exact place.
         // =====================================================
 
         if (
-            details.lat !== null &&
-            details.lat !== undefined &&
-            details.lon !== null &&
-            details.lon !== undefined
+            hasCoordinates(details)
         ) {
 
-            searchQuery =
+            const coordinates =
                 `${details.lat},${details.lon}`;
 
+
+            console.log(
+                "WeatherSphere - Selected exact location:",
+                details.name
+            );
+
+
+            console.log(
+                "WeatherSphere - Coordinates:",
+                coordinates
+            );
+
+
+            if (
+                typeof getWeather ===
+                "function"
+            ) {
+
+                getWeather(
+                    coordinates
+                );
+
+            }
+
+            else {
+
+                console.error(
+                    "Autocomplete: getWeather() is not available."
+                );
+
+            }
+
+
+            return;
+
         }
 
 
         // =====================================================
-        // FALLBACK LOCATION QUERY
+        // FALLBACK LOCATION SEARCH
         // =====================================================
 
-        else {
-
-            searchQuery = [
-
-                details.name,
-
-                details.district,
-
-                details.region,
-
-                details.country
-
-            ]
-                .filter(Boolean)
-                .join(", ");
-
-        }
+        const searchQuery =
+            buildLocationQuery(details);
 
 
-        // -----------------------------------------------------
-        // Search selected location
-        // -----------------------------------------------------
+        console.log(
+            "WeatherSphere - Coordinate unavailable."
+        );
+
+
+        console.log(
+            "WeatherSphere - Using location query:",
+            searchQuery
+        );
+
 
         if (
             typeof getWeather ===
@@ -671,7 +793,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // -----------------------------------------------------
-        // Scroll selected suggestion into view
+        // Keep selected item visible
         // -----------------------------------------------------
 
         if (
@@ -698,18 +820,34 @@ document.addEventListener("DOMContentLoaded", () => {
         signal
     ) {
 
-        /*
-         * Expected backend route:
-         *
-         * GET /api/search/:query
-         *
-         * Example:
-         *
-         * /api/search/Pune
-         */
+        // IMPORTANT:
+        //
+        // encodeURIComponent() converts:
+        //
+        // "New Delhi"
+        //
+        // into:
+        //
+        // "New%20Delhi"
+        //
+        // so spaces and special characters are safely
+        // passed through the URL.
+        //
+
+        const encodedQuery =
+            encodeURIComponent(
+                query
+            );
+
 
         const url =
-            `${BACKEND_URL}/api/search/${encodeURIComponent(query)}`;
+            `${BACKEND_URL}/api/search/${encodedQuery}`;
+
+
+        console.log(
+            "WeatherSphere - Backend search:",
+            query
+        );
 
 
         const response =
@@ -736,10 +874,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         // -----------------------------------------------------
-        // Support multiple backend response formats
+        // Support different backend response formats
         // -----------------------------------------------------
 
-        if (Array.isArray(data)) {
+        if (
+            Array.isArray(data)
+        ) {
 
             return data;
 
@@ -782,7 +922,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // FETCH SUGGESTIONS FROM WEATHERAPI
+    // WEATHERAPI FALLBACK
     // =========================================================
 
     async function getWeatherAPISuggestions(
@@ -808,7 +948,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
         const url =
-            `https://api.weatherapi.com/v1/search.json?key=${encodeURIComponent(API_KEY)}&q=${encodeURIComponent(query)}`;
+            `https://api.weatherapi.com/v1/search.json` +
+            `?key=${encodeURIComponent(API_KEY)}` +
+            `&q=${encodeURIComponent(query)}`;
 
 
         const response =
@@ -834,7 +976,9 @@ document.addEventListener("DOMContentLoaded", () => {
             await response.json();
 
 
-        if (!Array.isArray(data)) {
+        if (
+            !Array.isArray(data)
+        ) {
 
             return [];
 
@@ -847,7 +991,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // GET LOCATION SUGGESTIONS
+    // GET SUGGESTIONS
     // =========================================================
 
     async function getSuggestions(query) {
@@ -881,7 +1025,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             // =================================================
-            // TRY BACKEND FIRST
+            // BACKEND FIRST
             // =================================================
 
             try {
@@ -892,12 +1036,9 @@ document.addEventListener("DOMContentLoaded", () => {
                         signal
                     );
 
-
             }
 
             catch (backendError) {
-
-                // Ignore cancellation
 
                 if (
                     backendError.name ===
@@ -910,13 +1051,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
                 console.warn(
-                    "Backend autocomplete unavailable. Trying WeatherAPI...",
+                    "WeatherSphere - Backend autocomplete unavailable. Using WeatherAPI fallback.",
                     backendError.message
                 );
 
 
                 // =============================================
-                // FALLBACK TO WEATHERAPI
+                // WEATHERAPI FALLBACK
                 // =============================================
 
                 locations =
@@ -929,24 +1070,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             // =================================================
-            // MAKE SURE THIS IS STILL THE LATEST REQUEST
+            // CHECK REQUEST ID
             // =================================================
 
             if (
-                currentRequest !== requestId
-            ) {
-
-                return;
-
-            }
-
-
-            // -------------------------------------------------
-            // Make sure input hasn't changed
-            // -------------------------------------------------
-
-            if (
-                input.value.trim() !== query
+                currentRequest !==
+                requestId
             ) {
 
                 return;
@@ -955,7 +1084,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             // =================================================
-            // DISPLAY RESULTS
+            // CHECK INPUT
+            // =================================================
+
+            if (
+                input.value.trim() !==
+                query
+            ) {
+
+                return;
+
+            }
+
+
+            // =================================================
+            // DISPLAY
             // =================================================
 
             showSuggestions(
@@ -977,7 +1120,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             console.error(
-                "Autocomplete error:",
+                "WeatherSphere Autocomplete Error:",
                 error
             );
 
@@ -1002,7 +1145,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             // -------------------------------------------------
-            // Cancel old debounce
+            // Cancel debounce
             // -------------------------------------------------
 
             clearTimeout(
@@ -1011,15 +1154,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             // -------------------------------------------------
-            // Reset keyboard navigation
+            // Reset selection
             // -------------------------------------------------
 
             selectedIndex = -1;
 
 
-            // =================================================
-            // EMPTY INPUT
-            // =================================================
+            // -------------------------------------------------
+            // Empty input
+            // -------------------------------------------------
 
             if (
                 query.length === 0
@@ -1032,9 +1175,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            // =================================================
-            // MINIMUM CHARACTERS
-            // =================================================
+            // -------------------------------------------------
+            // Minimum 2 characters
+            // -------------------------------------------------
 
             if (
                 query.length < 2
@@ -1047,9 +1190,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
 
-            // =================================================
-            // DEBOUNCE
-            // =================================================
+            // -------------------------------------------------
+            // Debounce
+            // -------------------------------------------------
 
             debounceTimer =
                 setTimeout(
@@ -1086,10 +1229,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 "none";
 
 
-            // -------------------------------------------------
-            // No suggestions
-            // -------------------------------------------------
-
             if (
                 !items.length ||
                 !dropdownVisible
@@ -1105,7 +1244,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // =================================================
 
             if (
-                event.key === "ArrowDown"
+                event.key ===
+                "ArrowDown"
             ) {
 
                 event.preventDefault();
@@ -1134,7 +1274,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // =================================================
 
             else if (
-                event.key === "ArrowUp"
+                event.key ===
+                "ArrowUp"
             ) {
 
                 event.preventDefault();
@@ -1163,8 +1304,12 @@ document.addEventListener("DOMContentLoaded", () => {
             // =================================================
 
             else if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
+
+                // If a suggestion is selected,
+                // use that exact location.
 
                 if (
                     selectedIndex >= 0 &&
@@ -1186,6 +1331,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 }
 
+                // If no suggestion is selected,
+                // allow normal search handling.
+
             }
 
 
@@ -1194,7 +1342,8 @@ document.addEventListener("DOMContentLoaded", () => {
             // =================================================
 
             else if (
-                event.key === "Escape"
+                event.key ===
+                "Escape"
             ) {
 
                 event.preventDefault();
@@ -1239,11 +1388,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "blur",
         () => {
 
-            /*
-             * Delay allows the suggestion click event to
-             * execute before the dropdown disappears.
-             */
-
             setTimeout(
                 () => {
 
@@ -1268,25 +1412,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // PUBLIC FUNCTION
+    // PUBLIC HIDE FUNCTION
     // =========================================================
-
-    /*
-     * Allows app.js or other files to close the dropdown.
-     */
 
     window.hideWeatherSuggestions =
         hideSuggestions;
 
 
     // =========================================================
-    // PUBLIC SEARCH FUNCTION
+    // PUBLIC REFRESH FUNCTION
     // =========================================================
-
-    /*
-     * Useful if another JavaScript file wants to manually
-     * trigger autocomplete.
-     */
 
     window.refreshWeatherSuggestions =
         function () {
@@ -1309,7 +1444,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // =========================================================
-    // INITIALIZATION MESSAGE
+    // INITIALIZATION
     // =========================================================
 
     console.log(
