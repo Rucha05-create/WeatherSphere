@@ -1,7 +1,9 @@
 // ============================================================
 // WEATHERSPHERE - AUTOCOMPLETE.JS
 // ============================================================
+//
 // Handles:
+//
 // 1. Live location suggestions
 // 2. City / village / district / state / country display
 // 3. Debounced backend requests
@@ -9,684 +11,837 @@
 // 5. Keyboard navigation
 // 6. Mouse selection
 // 7. Exact latitude/longitude search
-// 8. Location disambiguation
-// 9. Safe HTML rendering
+// 8. Duplicate-name location handling
+// 9. Safe DOM rendering
 // 10. Closing dropdown
 // 11. Request cancellation
+//
 // ============================================================
 
 
-document.addEventListener("DOMContentLoaded", () => {
-
-    // =========================================================
-    // DOM ELEMENTS
-    // =========================================================
-
-    const input =
-        document.getElementById("cityInput");
-
-    const suggestionsBox =
-        document.getElementById("suggestions");
+document.addEventListener(
+    "DOMContentLoaded",
+    () => {
 
 
-    // =========================================================
-    // CHECK REQUIRED ELEMENTS
-    // =========================================================
+        // ========================================================
+        // DOM ELEMENTS
+        // ========================================================
 
-    if (!input) {
-
-        console.error(
-            "WeatherSphere Autocomplete: cityInput not found."
-        );
-
-        return;
-
-    }
+        const input =
+            document.getElementById(
+                "cityInput"
+            );
 
 
-    if (!suggestionsBox) {
-
-        console.error(
-            "WeatherSphere Autocomplete: suggestions container not found."
-        );
-
-        return;
-
-    }
+        const suggestionsBox =
+            document.getElementById(
+                "suggestions"
+            );
 
 
-    // =========================================================
-    // VARIABLES
-    // =========================================================
+        // ========================================================
+        // CHECK REQUIRED ELEMENTS
+        // ========================================================
 
-    let debounceTimer = null;
+        if (!input) {
 
-    let selectedIndex = -1;
+            console.error(
+                "WeatherSphere Autocomplete: cityInput not found."
+            );
 
-    let currentLocations = [];
-
-    let abortController = null;
-
-    let requestId = 0;
-
-
-    // =========================================================
-    // BACKEND URL
-    // =========================================================
-
-    const BACKEND_URL =
-        "http://localhost:5000";
-
-
-    // =========================================================
-    // HIDE SUGGESTIONS
-    // =========================================================
-
-    function hideSuggestions() {
-
-        suggestionsBox.innerHTML = "";
-
-        suggestionsBox.style.display = "none";
-
-        suggestionsBox.classList.remove("show");
-
-        selectedIndex = -1;
-
-        currentLocations = [];
-
-    }
-
-
-    // =========================================================
-    // SHOW SUGGESTIONS
-    // =========================================================
-
-    function displaySuggestions() {
-
-        suggestionsBox.style.display = "block";
-
-        suggestionsBox.classList.add("show");
-
-    }
-
-
-    // =========================================================
-    // ESCAPE HTML
-    // =========================================================
-
-    function escapeHTML(value) {
-
-        const div =
-            document.createElement("div");
-
-        div.textContent =
-            value ?? "";
-
-        return div.innerHTML;
-
-    }
-
-
-    // =========================================================
-    // NORMALIZE LOCATION
-    // =========================================================
-    // Converts backend / WeatherAPI responses into one format.
-    // =========================================================
-
-    function normalizeLocation(location) {
-
-        if (!location) {
-
-            return null;
+            return;
 
         }
 
 
-        const latitude =
-            location.lat ??
-            location.latitude ??
-            null;
+        if (!suggestionsBox) {
+
+            console.error(
+                "WeatherSphere Autocomplete: suggestions container not found."
+            );
+
+            return;
+
+        }
 
 
-        const longitude =
-            location.lon ??
-            location.lng ??
-            location.longitude ??
-            null;
+        // ========================================================
+        // VARIABLES
+        // ========================================================
+
+        let debounceTimer = null;
+
+        let selectedIndex = -1;
+
+        let currentLocations = [];
+
+        let abortController = null;
+
+        let requestId = 0;
 
 
-        return {
+        // ========================================================
+        // BACKEND URL
+        // ========================================================
 
-            name:
-                location.name ||
-                location.city ||
-                "Unknown Location",
-
-
-            district:
-                location.district ||
-                location.county ||
-                location.district_name ||
-                "",
+        const BACKEND_URL =
+            "http://localhost:5000";
 
 
-            region:
-                location.region ||
-                location.state ||
-                location.state_district ||
-                "",
+        // ========================================================
+        // HIDE SUGGESTIONS
+        // ========================================================
+
+        function hideSuggestions() {
+
+            suggestionsBox.innerHTML = "";
+
+            suggestionsBox.style.display =
+                "none";
+
+            suggestionsBox.classList.remove(
+                "show"
+            );
+
+            selectedIndex = -1;
+
+            currentLocations = [];
+
+        }
 
 
-            country:
-                location.country ||
-                "",
+        // ========================================================
+        // DISPLAY SUGGESTIONS
+        // ========================================================
+
+        function displaySuggestions() {
+
+            suggestionsBox.style.display =
+                "block";
+
+            suggestionsBox.classList.add(
+                "show"
+            );
+
+        }
 
 
-            lat:
-                latitude !== null
-                    ? Number(latitude)
-                    : null,
+        // ========================================================
+        // NORMALIZE LOCATION
+        // ========================================================
+
+        function normalizeLocation(
+            location
+        ) {
+
+            if (!location) {
+
+                return null;
+
+            }
 
 
-            lon:
-                longitude !== null
-                    ? Number(longitude)
-                    : null
-
-        };
-
-    }
+            const latitude =
+                location.lat ??
+                location.latitude ??
+                null;
 
 
-    // =========================================================
-    // CREATE LOCATION DETAILS
-    // =========================================================
+            const longitude =
+                location.lon ??
+                location.lng ??
+                location.longitude ??
+                null;
 
-    function getLocationDetails(location) {
-
-        const details =
-            normalizeLocation(location);
-
-
-        if (!details) {
 
             return {
 
-                name: "Unknown Location",
+                name:
+                    location.name ||
+                    location.city ||
+                    "Unknown Location",
 
-                district: "",
 
-                region: "",
+                district:
+                    location.district ||
+                    location.county ||
+                    location.district_name ||
+                    "",
 
-                country: "",
 
-                lat: null,
+                region:
+                    location.region ||
+                    location.state ||
+                    location.state_district ||
+                    "",
 
-                lon: null,
 
-                locationText: ""
+                country:
+                    location.country ||
+                    "",
+
+
+                lat:
+                    latitude !== null
+                        ? Number(latitude)
+                        : null,
+
+
+                lon:
+                    longitude !== null
+                        ? Number(longitude)
+                        : null
 
             };
 
         }
 
 
-        const parts = [];
+        // ========================================================
+        // GET LOCATION DETAILS
+        // ========================================================
+
+        function getLocationDetails(
+            location
+        ) {
+
+            const details =
+                normalizeLocation(
+                    location
+                );
 
 
-        // -----------------------------------------------------
-        // DISTRICT
-        // -----------------------------------------------------
+            if (!details) {
 
-        if (details.district) {
+                return {
 
-            parts.push(
+                    name:
+                        "Unknown Location",
+
+                    district:
+                        "",
+
+                    region:
+                        "",
+
+                    country:
+                        "",
+
+                    lat:
+                        null,
+
+                    lon:
+                        null,
+
+                    locationText:
+                        ""
+
+                };
+
+            }
+
+
+            const parts = [];
+
+
+            // ----------------------------------------------------
+            // DISTRICT
+            // ----------------------------------------------------
+
+            if (details.district) {
+
+                parts.push(
+                    details.district
+                );
+
+            }
+
+
+            // ----------------------------------------------------
+            // STATE / REGION
+            // ----------------------------------------------------
+
+            if (
+                details.region &&
+                details.region !==
                 details.district
-            );
+            ) {
+
+                parts.push(
+                    details.region
+                );
+
+            }
+
+
+            // ----------------------------------------------------
+            // COUNTRY
+            // ----------------------------------------------------
+
+            if (details.country) {
+
+                parts.push(
+                    details.country
+                );
+
+            }
+
+
+            return {
+
+                ...details,
+
+                locationText:
+                    parts.join(
+                        " • "
+                    )
+
+            };
 
         }
 
 
-        // -----------------------------------------------------
-        // STATE / REGION
-        // -----------------------------------------------------
+        // ========================================================
+        // BUILD LOCATION QUERY
+        // ========================================================
 
-        if (
-            details.region &&
-            details.region !== details.district
+        function buildLocationQuery(
+            details
         ) {
 
-            parts.push(
-                details.region
-            );
+            return [
 
-        }
+                details.name,
 
+                details.district,
 
-        // -----------------------------------------------------
-        // COUNTRY
-        // -----------------------------------------------------
+                details.region,
 
-        if (details.country) {
-
-            parts.push(
                 details.country
+
+            ]
+                .filter(Boolean)
+                .join(", ");
+
+        }
+
+
+        // ========================================================
+        // CHECK VALID COORDINATES
+        // ========================================================
+
+        function hasCoordinates(
+            location
+        ) {
+
+            return (
+
+                location &&
+
+                Number.isFinite(
+                    Number(
+                        location.lat
+                    )
+                ) &&
+
+                Number.isFinite(
+                    Number(
+                        location.lon
+                    )
+                )
+
             );
 
         }
 
 
-        return {
+        // ========================================================
+        // SHOW SUGGESTIONS
+        // ========================================================
 
-            ...details,
-
-            locationText:
-                parts.join(" • ")
-
-        };
-
-    }
-
-
-    // =========================================================
-    // BUILD LOCATION QUERY
-    // =========================================================
-    // Used only when coordinates are unavailable.
-    // =========================================================
-
-    function buildLocationQuery(details) {
-
-        return [
-
-            details.name,
-
-            details.district,
-
-            details.region,
-
-            details.country
-
-        ]
-            .filter(Boolean)
-            .join(", ");
-
-    }
-
-
-    // =========================================================
-    // CHECK VALID COORDINATES
-    // =========================================================
-
-    function hasCoordinates(location) {
-
-        return (
-
-            location &&
-
-            Number.isFinite(
-                Number(location.lat)
-            ) &&
-
-            Number.isFinite(
-                Number(location.lon)
-            )
-
-        );
-
-    }
-
-
-    // =========================================================
-    // SHOW SUGGESTIONS
-    // =========================================================
-
-    function showSuggestions(locations) {
-
-        suggestionsBox.innerHTML = "";
-
-        selectedIndex = -1;
-
-
-        if (
-            !Array.isArray(locations) ||
-            locations.length === 0
-        ) {
-
-            hideSuggestions();
-
-            return;
-
-        }
-
-
-        // -----------------------------------------------------
-        // Normalize and limit results
-        // -----------------------------------------------------
-
-        const limitedLocations =
+        function showSuggestions(
             locations
-                .slice(0, 10)
-                .map(normalizeLocation)
-                .filter(Boolean);
-
-
-        currentLocations =
-            limitedLocations;
-
-
-        if (
-            currentLocations.length === 0
         ) {
 
-            hideSuggestions();
+            suggestionsBox.innerHTML =
+                "";
 
-            return;
-
-        }
-
-
-        // =====================================================
-        // CREATE SUGGESTION CARDS
-        // =====================================================
-
-        currentLocations.forEach(
-            (location, index) => {
-
-                const details =
-                    getLocationDetails(location);
+            selectedIndex = -1;
 
 
-                const item =
-                    document.createElement("div");
+            // ----------------------------------------------------
+            // Validate results
+            // ----------------------------------------------------
+
+            if (
+                !Array.isArray(
+                    locations
+                ) ||
+                locations.length === 0
+            ) {
+
+                hideSuggestions();
+
+                return;
+
+            }
 
 
-                item.className =
-                    "suggestion";
+            // ----------------------------------------------------
+            // Normalize results
+            //
+            // Keep up to 10 results.
+            // ----------------------------------------------------
+
+            const normalizedLocations =
+                locations
+                    .map(
+                        normalizeLocation
+                    )
+                    .filter(Boolean)
+                    .slice(0, 10);
 
 
-                item.setAttribute(
-                    "role",
-                    "option"
-                );
+            currentLocations =
+                normalizedLocations;
 
 
-                item.setAttribute(
-                    "data-index",
+            if (
+                currentLocations.length === 0
+            ) {
+
+                hideSuggestions();
+
+                return;
+
+            }
+
+
+            // ====================================================
+            // CREATE LOCATION CARDS
+            // ====================================================
+
+            currentLocations.forEach(
+                (
+                    location,
                     index
-                );
+                ) => {
 
 
-                item.setAttribute(
-                    "aria-selected",
-                    "false"
-                );
+                    const details =
+                        getLocationDetails(
+                            location
+                        );
 
 
-                // =================================================
-                // TITLE
-                // =================================================
+                    // ------------------------------------------------
+                    // MAIN ITEM
+                    // ------------------------------------------------
 
-                const title =
-                    document.createElement("div");
-
-
-                title.className =
-                    "suggestion-title";
+                    const item =
+                        document.createElement(
+                            "div"
+                        );
 
 
-                const icon =
-                    document.createElement("i");
+                    item.className =
+                        "suggestion";
 
 
-                icon.className =
-                    "fa-solid fa-location-dot";
+                    item.setAttribute(
+                        "role",
+                        "option"
+                    );
 
 
-                const strong =
-                    document.createElement("strong");
+                    item.setAttribute(
+                        "data-index",
+                        index
+                    );
 
 
-                strong.textContent =
-                    details.name;
+                    item.setAttribute(
+                        "aria-selected",
+                        "false"
+                    );
 
 
-                title.appendChild(icon);
+                    // =================================================
+                    // TITLE
+                    // =================================================
 
-                title.appendChild(strong);
-
-
-                // =================================================
-                // LOCATION INFORMATION
-                // =================================================
-
-                const locationInfo =
-                    document.createElement("div");
+                    const title =
+                        document.createElement(
+                            "div"
+                        );
 
 
-                locationInfo.className =
-                    "suggestion-location";
+                    title.className =
+                        "suggestion-title";
 
 
-                const locationParts = [];
+                    const icon =
+                        document.createElement(
+                            "i"
+                        );
 
 
-                if (details.district) {
+                    icon.className =
+                        "fa-solid fa-location-dot";
 
-                    locationParts.push(
+
+                    const strong =
+                        document.createElement(
+                            "strong"
+                        );
+
+
+                    strong.textContent =
+                        details.name;
+
+
+                    title.appendChild(
+                        icon
+                    );
+
+
+                    title.appendChild(
+                        strong
+                    );
+
+
+                    // =================================================
+                    // LOCATION INFORMATION
+                    // =================================================
+
+                    const locationInfo =
+                        document.createElement(
+                            "div"
+                        );
+
+
+                    locationInfo.className =
+                        "suggestion-location";
+
+
+                    const locationParts =
+                        [];
+
+
+                    // ------------------------------------------------
+                    // District
+                    // ------------------------------------------------
+
+                    if (
                         details.district
+                    ) {
+
+                        locationParts.push(
+                            details.district
+                        );
+
+                    }
+
+
+                    // ------------------------------------------------
+                    // State / Region
+                    // ------------------------------------------------
+
+                    if (
+
+                        details.region &&
+
+                        details.region !==
+                        details.district
+
+                    ) {
+
+                        locationParts.push(
+                            details.region
+                        );
+
+                    }
+
+
+                    // ------------------------------------------------
+                    // Country
+                    // ------------------------------------------------
+
+                    if (
+                        details.country
+                    ) {
+
+                        locationParts.push(
+                            details.country
+                        );
+
+                    }
+
+
+                    locationInfo.textContent =
+                        locationParts.join(
+                            " • "
+                        );
+
+
+                    // =================================================
+                    // COORDINATES
+                    // =================================================
+
+                    const coordinates =
+                        document.createElement(
+                            "small"
+                        );
+
+
+                    coordinates.className =
+                        "suggestion-coordinates";
+
+
+                    if (
+                        hasCoordinates(
+                            location
+                        )
+                    ) {
+
+                        coordinates.textContent =
+
+                            `📍 ${Number(
+                                location.lat
+                            ).toFixed(4)}, ` +
+
+                            `${Number(
+                                location.lon
+                            ).toFixed(4)}`;
+
+                    }
+
+                    else {
+
+                        coordinates.textContent =
+                            "📍 Coordinates unavailable";
+
+                    }
+
+
+                    // =================================================
+                    // APPEND CONTENT
+                    // =================================================
+
+                    item.appendChild(
+                        title
+                    );
+
+
+                    if (
+                        locationParts.length > 0
+                    ) {
+
+                        item.appendChild(
+                            locationInfo
+                        );
+
+                    }
+
+
+                    item.appendChild(
+                        coordinates
+                    );
+
+
+                    // =================================================
+                    // MOUSE ENTER
+                    // =================================================
+
+                    item.addEventListener(
+                        "mouseenter",
+                        () => {
+
+                            selectedIndex =
+                                index;
+
+                            updateSelectedItem();
+
+                        }
+                    );
+
+
+                    // =================================================
+                    // PREVENT INPUT BLUR
+                    // =================================================
+
+                    item.addEventListener(
+                        "mousedown",
+                        (event) => {
+
+                            event.preventDefault();
+
+                        }
+                    );
+
+
+                    // =================================================
+                    // CLICK
+                    // =================================================
+
+                    item.addEventListener(
+                        "click",
+                        () => {
+
+                            selectLocation(
+                                location
+                            );
+
+                        }
+                    );
+
+
+                    // =================================================
+                    // ADD TO DROPDOWN
+                    // =================================================
+
+                    suggestionsBox.appendChild(
+                        item
                     );
 
                 }
+            );
+
+
+            // ========================================================
+            // SHOW DROPDOWN
+            // ========================================================
+
+            displaySuggestions();
+
+        }
+
+
+        // ========================================================
+        // SELECT LOCATION
+        // ========================================================
+
+        function selectLocation(
+            location
+        ) {
+
+            if (!location) {
+
+                return;
+
+            }
+
+
+            const details =
+                getLocationDetails(
+                    location
+                );
+
+
+            // ====================================================
+            // SET INPUT VALUE
+            // ====================================================
+
+            input.value =
+                details.name;
+
+
+            // ====================================================
+            // CLOSE DROPDOWN
+            // ====================================================
+
+            hideSuggestions();
+
+
+            // ====================================================
+            // USE EXACT COORDINATES
+            // ====================================================
+            //
+            // This is the most important part.
+            //
+            // If two locations have the same name:
+            //
+            // Jalgaon, India
+            // Jalgaon, Bangladesh
+            //
+            // their coordinates are different.
+            //
+            // Therefore we send:
+            //
+            // 21.xxxx,76.xxxx
+            //
+            // instead of just:
+            //
+            // Jalgaon
+            //
+            // ====================================================
+
+            if (
+                hasCoordinates(
+                    details
+                )
+            ) {
+
+                const coordinates =
+                    `${details.lat},${details.lon}`;
+
+
+                console.log(
+                    "WeatherSphere - Selected location:",
+                    details.name
+                );
+
+
+                console.log(
+                    "WeatherSphere - Exact coordinates:",
+                    coordinates
+                );
 
 
                 if (
-                    details.region &&
-                    details.region !== details.district
+                    typeof getWeather ===
+                    "function"
                 ) {
 
-                    locationParts.push(
-                        details.region
+                    getWeather(
+                        coordinates
                     );
-
-                }
-
-
-                if (details.country) {
-
-                    locationParts.push(
-                        details.country
-                    );
-
-                }
-
-
-                locationInfo.textContent =
-                    locationParts.join(" • ");
-
-
-                // =================================================
-                // COORDINATES
-                // =================================================
-                // This is especially useful when two locations
-                // have similar or identical names.
-                // =================================================
-
-                const coordinates =
-                    document.createElement("small");
-
-
-                coordinates.className =
-                    "suggestion-coordinates";
-
-
-                if (hasCoordinates(location)) {
-
-                    coordinates.textContent =
-                        `📍 ${Number(location.lat).toFixed(4)}, ` +
-                        `${Number(location.lon).toFixed(4)}`;
 
                 }
 
                 else {
 
-                    coordinates.textContent =
-                        "📍 Coordinates unavailable";
-
-                }
-
-
-                // =================================================
-                // APPEND CONTENT
-                // =================================================
-
-                item.appendChild(title);
-
-
-                if (
-                    locationParts.length > 0
-                ) {
-
-                    item.appendChild(
-                        locationInfo
+                    console.error(
+                        "Autocomplete: getWeather() is not available."
                     );
 
                 }
 
 
-                item.appendChild(
-                    coordinates
-                );
-
-
-                // =================================================
-                // MOUSE ENTER
-                // =================================================
-
-                item.addEventListener(
-                    "mouseenter",
-                    () => {
-
-                        selectedIndex =
-                            index;
-
-                        updateSelectedItem();
-
-                    }
-                );
-
-
-                // =================================================
-                // PREVENT BLUR
-                // =================================================
-
-                item.addEventListener(
-                    "mousedown",
-                    (event) => {
-
-                        event.preventDefault();
-
-                    }
-                );
-
-
-                // =================================================
-                // CLICK
-                // =================================================
-
-                item.addEventListener(
-                    "click",
-                    () => {
-
-                        selectLocation(
-                            location
-                        );
-
-                    }
-                );
-
-
-                suggestionsBox.appendChild(
-                    item
-                );
+                return;
 
             }
-        );
 
 
-        // =====================================================
-        // DISPLAY DROPDOWN
-        // =====================================================
+            // ====================================================
+            // FALLBACK
+            // ====================================================
 
-        displaySuggestions();
-
-    }
-
-
-    // =========================================================
-    // SELECT LOCATION
-    // =========================================================
-
-    function selectLocation(location) {
-
-        if (!location) {
-
-            return;
-
-        }
-
-
-        const details =
-            getLocationDetails(location);
-
-
-        // =====================================================
-        // SET INPUT
-        // =====================================================
-
-        input.value =
-            details.name;
-
-
-        // =====================================================
-        // CLOSE DROPDOWN
-        // =====================================================
-
-        hideSuggestions();
-
-
-        // =====================================================
-        // EXACT COORDINATE SEARCH
-        // =====================================================
-        // IMPORTANT:
-        //
-        // We do NOT search only by city name.
-        //
-        // If there are two similar locations such as:
-        //
-        // Jalgaon
-        // Jalgaon Jamod
-        //
-        // or two locations with the same name,
-        // latitude + longitude identify the exact place.
-        // =====================================================
-
-        if (
-            hasCoordinates(details)
-        ) {
-
-            const coordinates =
-                `${details.lat},${details.lon}`;
+            const searchQuery =
+                buildLocationQuery(
+                    details
+                );
 
 
             console.log(
-                "WeatherSphere - Selected exact location:",
-                details.name
+                "WeatherSphere - Coordinates unavailable."
             );
 
 
             console.log(
-                "WeatherSphere - Coordinates:",
-                coordinates
+                "WeatherSphere - Using location query:",
+                searchQuery
             );
 
 
@@ -696,7 +851,7 @@ document.addEventListener("DOMContentLoaded", () => {
             ) {
 
                 getWeather(
-                    coordinates
+                    searchQuery
                 );
 
             }
@@ -709,339 +864,413 @@ document.addEventListener("DOMContentLoaded", () => {
 
             }
 
-
-            return;
-
         }
 
 
-        // =====================================================
-        // FALLBACK LOCATION SEARCH
-        // =====================================================
+        // ========================================================
+        // UPDATE SELECTED ITEM
+        // ========================================================
 
-        const searchQuery =
-            buildLocationQuery(details);
+        function updateSelectedItem() {
 
-
-        console.log(
-            "WeatherSphere - Coordinate unavailable."
-        );
-
-
-        console.log(
-            "WeatherSphere - Using location query:",
-            searchQuery
-        );
-
-
-        if (
-            typeof getWeather ===
-            "function"
-        ) {
-
-            getWeather(
-                searchQuery
-            );
-
-        }
-
-        else {
-
-            console.error(
-                "Autocomplete: getWeather() is not available."
-            );
-
-        }
-
-    }
-
-
-    // =========================================================
-    // UPDATE SELECTED ITEM
-    // =========================================================
-
-    function updateSelectedItem() {
-
-        const items =
-            suggestionsBox.querySelectorAll(
-                ".suggestion"
-            );
-
-
-        items.forEach(
-            (item, index) => {
-
-                const isSelected =
-                    index === selectedIndex;
-
-
-                item.classList.toggle(
-                    "suggestion-selected",
-                    isSelected
+            const items =
+                suggestionsBox.querySelectorAll(
+                    ".suggestion"
                 );
 
 
-                item.setAttribute(
-                    "aria-selected",
-                    isSelected
-                        ? "true"
-                        : "false"
-                );
+            items.forEach(
+                (
+                    item,
+                    index
+                ) => {
 
-            }
-        );
+                    const isSelected =
+                        index ===
+                        selectedIndex;
 
 
-        // -----------------------------------------------------
-        // Keep selected item visible
-        // -----------------------------------------------------
+                    item.classList.toggle(
+                        "suggestion-selected",
+                        isSelected
+                    );
 
-        if (
-            selectedIndex >= 0 &&
-            items[selectedIndex]
-        ) {
 
-            items[selectedIndex]
-                .scrollIntoView({
-                    block: "nearest"
+                    item.setAttribute(
+                        "aria-selected",
+                        isSelected
+                            ? "true"
+                            : "false"
+                    );
+
+                }
+            );
+
+
+            // ----------------------------------------------------
+            // Scroll selected item into view
+            // ----------------------------------------------------
+
+            if (
+
+                selectedIndex >= 0 &&
+
+                items[selectedIndex]
+
+            ) {
+
+                items[
+                    selectedIndex
+                ].scrollIntoView({
+
+                    block:
+                        "nearest"
+
                 });
 
+            }
+
         }
 
-    }
+
+        // ========================================================
+        // BACKEND AUTOCOMPLETE
+        // ========================================================
+
+        async function getBackendSuggestions(
+            query,
+            signal
+        ) {
+
+            const encodedQuery =
+                encodeURIComponent(
+                    query
+                );
 
 
-    // =========================================================
-    // FETCH SUGGESTIONS FROM BACKEND
-    // =========================================================
+            const url =
+                `${BACKEND_URL}/api/search/${encodedQuery}`;
 
-    async function getBackendSuggestions(
-        query,
-        signal
-    ) {
 
-        // IMPORTANT:
-        //
-        // encodeURIComponent() converts:
-        //
-        // "New Delhi"
-        //
-        // into:
-        //
-        // "New%20Delhi"
-        //
-        // so spaces and special characters are safely
-        // passed through the URL.
-        //
-
-        const encodedQuery =
-            encodeURIComponent(
+            console.log(
+                "WeatherSphere - Backend search:",
                 query
             );
 
 
-        const url =
-            `${BACKEND_URL}/api/search/${encodedQuery}`;
+            const response =
+                await fetch(
+                    url,
+                    {
+
+                        method:
+                            "GET",
+
+                        signal
+
+                    }
+                );
 
 
-        console.log(
-            "WeatherSphere - Backend search:",
-            query
-        );
+            if (!response.ok) {
+
+                throw new Error(
+
+                    `Backend search HTTP error: ${response.status}`
+
+                );
+
+            }
 
 
-        const response =
-            await fetch(
-                url,
-                {
-                    method: "GET",
-                    signal
-                }
-            );
+            const data =
+                await response.json();
 
 
-        if (!response.ok) {
+            // ----------------------------------------------------
+            // Array response
+            // ----------------------------------------------------
 
-            throw new Error(
-                `Backend search HTTP error: ${response.status}`
-            );
+            if (
+                Array.isArray(data)
+            ) {
 
-        }
+                return data;
 
-
-        const data =
-            await response.json();
-
-
-        // -----------------------------------------------------
-        // Support different backend response formats
-        // -----------------------------------------------------
-
-        if (
-            Array.isArray(data)
-        ) {
-
-            return data;
-
-        }
+            }
 
 
-        if (
-            data &&
-            Array.isArray(data.results)
-        ) {
+            // ----------------------------------------------------
+            // Alternative response formats
+            // ----------------------------------------------------
 
-            return data.results;
+            if (
+                data &&
+                Array.isArray(
+                    data.results
+                )
+            ) {
 
-        }
+                return data.results;
 
-
-        if (
-            data &&
-            Array.isArray(data.locations)
-        ) {
-
-            return data.locations;
-
-        }
+            }
 
 
-        if (
-            data &&
-            Array.isArray(data.data)
-        ) {
+            if (
+                data &&
+                Array.isArray(
+                    data.locations
+                )
+            ) {
 
-            return data.data;
+                return data.locations;
 
-        }
-
-
-        return [];
-
-    }
+            }
 
 
-    // =========================================================
-    // WEATHERAPI FALLBACK
-    // =========================================================
+            if (
+                data &&
+                Array.isArray(
+                    data.data
+                )
+            ) {
 
-    async function getWeatherAPISuggestions(
-        query,
-        signal
-    ) {
+                return data.data;
 
-        // -----------------------------------------------------
-        // Check API key
-        // -----------------------------------------------------
+            }
 
-        if (
-            typeof API_KEY ===
-            "undefined" ||
-            !API_KEY
-        ) {
-
-            throw new Error(
-                "WeatherAPI key is missing."
-            );
-
-        }
-
-
-        const url =
-            `https://api.weatherapi.com/v1/search.json` +
-            `?key=${encodeURIComponent(API_KEY)}` +
-            `&q=${encodeURIComponent(query)}`;
-
-
-        const response =
-            await fetch(
-                url,
-                {
-                    method: "GET",
-                    signal
-                }
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                `WeatherAPI search HTTP error: ${response.status}`
-            );
-
-        }
-
-
-        const data =
-            await response.json();
-
-
-        if (
-            !Array.isArray(data)
-        ) {
 
             return [];
 
         }
 
 
-        return data;
+        // ========================================================
+        // WEATHERAPI FALLBACK
+        // ========================================================
 
-    }
+        async function getWeatherAPISuggestions(
+            query,
+            signal
+        ) {
+
+            // ----------------------------------------------------
+            // Check API key
+            // ----------------------------------------------------
+
+            if (
+
+                typeof API_KEY ===
+                "undefined" ||
+
+                !API_KEY
+
+            ) {
+
+                throw new Error(
+                    "WeatherAPI key is missing."
+                );
+
+            }
 
 
-    // =========================================================
-    // GET SUGGESTIONS
-    // =========================================================
+            const url =
 
-    async function getSuggestions(query) {
+                "https://api.weatherapi.com/v1/search.json" +
 
-        const currentRequest =
-            ++requestId;
+                `?key=${encodeURIComponent(
+                    API_KEY
+                )}` +
+
+                `&q=${encodeURIComponent(
+                    query
+                )}`;
 
 
-        // -----------------------------------------------------
-        // Cancel previous request
-        // -----------------------------------------------------
+            const response =
+                await fetch(
+                    url,
+                    {
 
-        if (abortController) {
+                        method:
+                            "GET",
 
-            abortController.abort();
+                        signal
+
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+
+                    `WeatherAPI search HTTP error: ${response.status}`
+
+                );
+
+            }
+
+
+            const data =
+                await response.json();
+
+
+            if (
+                !Array.isArray(
+                    data
+                )
+            ) {
+
+                return [];
+
+            }
+
+
+            return data;
 
         }
 
 
-        abortController =
-            new AbortController();
+        // ========================================================
+        // GET SUGGESTIONS
+        // ========================================================
+
+        async function getSuggestions(
+            query
+        ) {
+
+            const currentRequest =
+                ++requestId;
 
 
-        const signal =
-            abortController.signal;
+            // ----------------------------------------------------
+            // Cancel previous request
+            // ----------------------------------------------------
 
+            if (
+                abortController
+            ) {
 
-        try {
-
-            let locations = [];
-
-
-            // =================================================
-            // BACKEND FIRST
-            // =================================================
-
-            try {
-
-                locations =
-                    await getBackendSuggestions(
-                        query,
-                        signal
-                    );
+                abortController.abort();
 
             }
 
-            catch (backendError) {
+
+            abortController =
+                new AbortController();
+
+
+            const signal =
+                abortController.signal;
+
+
+            try {
+
+                let locations =
+                    [];
+
+
+                // =================================================
+                // BACKEND FIRST
+                // =================================================
+
+                try {
+
+                    locations =
+                        await getBackendSuggestions(
+                            query,
+                            signal
+                        );
+
+                }
+
+
+                catch (
+                    backendError
+                ) {
+
+                    // ---------------------------------------------
+                    // Ignore cancelled request
+                    // ---------------------------------------------
+
+                    if (
+                        backendError.name ===
+                        "AbortError"
+                    ) {
+
+                        return;
+
+                    }
+
+
+                    console.warn(
+
+                        "WeatherSphere - Backend autocomplete unavailable. Using WeatherAPI fallback.",
+
+                        backendError.message
+
+                    );
+
+
+                    // ---------------------------------------------
+                    // WeatherAPI fallback
+                    // ---------------------------------------------
+
+                    locations =
+                        await getWeatherAPISuggestions(
+                            query,
+                            signal
+                        );
+
+                }
+
+
+                // =================================================
+                // CHECK REQUEST ID
+                // =================================================
 
                 if (
-                    backendError.name ===
+                    currentRequest !==
+                    requestId
+                ) {
+
+                    return;
+
+                }
+
+
+                // =================================================
+                // CHECK CURRENT INPUT
+                // =================================================
+
+                if (
+                    input.value.trim() !==
+                    query
+                ) {
+
+                    return;
+
+                }
+
+
+                // =================================================
+                // DISPLAY RESULTS
+                // =================================================
+
+                showSuggestions(
+                    locations
+                );
+
+            }
+
+
+            catch (
+                error
+            ) {
+
+                if (
+                    error.name ===
                     "AbortError"
                 ) {
 
@@ -1050,405 +1279,345 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
 
-                console.warn(
-                    "WeatherSphere - Backend autocomplete unavailable. Using WeatherAPI fallback.",
-                    backendError.message
+                console.error(
+
+                    "WeatherSphere Autocomplete Error:",
+
+                    error
+
                 );
 
 
-                // =============================================
-                // WEATHERAPI FALLBACK
-                // =============================================
+                hideSuggestions();
 
-                locations =
-                    await getWeatherAPISuggestions(
-                        query,
-                        signal
+            }
+
+        }
+
+
+        // ========================================================
+        // INPUT EVENT
+        // ========================================================
+
+        input.addEventListener(
+            "input",
+            () => {
+
+                const query =
+                    input.value.trim();
+
+
+                // ------------------------------------------------
+                // Cancel previous debounce
+                // ------------------------------------------------
+
+                clearTimeout(
+                    debounceTimer
+                );
+
+
+                // ------------------------------------------------
+                // Reset keyboard selection
+                // ------------------------------------------------
+
+                selectedIndex = -1;
+
+
+                // ------------------------------------------------
+                // Empty input
+                // ------------------------------------------------
+
+                if (
+                    query.length === 0
+                ) {
+
+                    hideSuggestions();
+
+                    return;
+
+                }
+
+
+                // ------------------------------------------------
+                // Minimum 2 characters
+                // ------------------------------------------------
+
+                if (
+                    query.length < 2
+                ) {
+
+                    hideSuggestions();
+
+                    return;
+
+                }
+
+
+                // ------------------------------------------------
+                // Debounce request
+                // ------------------------------------------------
+
+                debounceTimer =
+                    setTimeout(
+                        () => {
+
+                            getSuggestions(
+                                query
+                            );
+
+                        },
+                        350
                     );
 
             }
+        );
 
 
-            // =================================================
-            // CHECK REQUEST ID
-            // =================================================
+        // ========================================================
+        // KEYBOARD NAVIGATION
+        // ========================================================
 
-            if (
-                currentRequest !==
-                requestId
-            ) {
+        input.addEventListener(
+            "keydown",
+            (event) => {
 
-                return;
+                const items =
+                    suggestionsBox.querySelectorAll(
+                        ".suggestion"
+                    );
 
-            }
 
-
-            // =================================================
-            // CHECK INPUT
-            // =================================================
-
-            if (
-                input.value.trim() !==
-                query
-            ) {
-
-                return;
-
-            }
-
-
-            // =================================================
-            // DISPLAY
-            // =================================================
-
-            showSuggestions(
-                locations
-            );
-
-        }
-
-        catch (error) {
-
-            if (
-                error.name ===
-                "AbortError"
-            ) {
-
-                return;
-
-            }
-
-
-            console.error(
-                "WeatherSphere Autocomplete Error:",
-                error
-            );
-
-
-            hideSuggestions();
-
-        }
-
-    }
-
-
-    // =========================================================
-    // INPUT EVENT
-    // =========================================================
-
-    input.addEventListener(
-        "input",
-        () => {
-
-            const query =
-                input.value.trim();
-
-
-            // -------------------------------------------------
-            // Cancel debounce
-            // -------------------------------------------------
-
-            clearTimeout(
-                debounceTimer
-            );
-
-
-            // -------------------------------------------------
-            // Reset selection
-            // -------------------------------------------------
-
-            selectedIndex = -1;
-
-
-            // -------------------------------------------------
-            // Empty input
-            // -------------------------------------------------
-
-            if (
-                query.length === 0
-            ) {
-
-                hideSuggestions();
-
-                return;
-
-            }
-
-
-            // -------------------------------------------------
-            // Minimum 2 characters
-            // -------------------------------------------------
-
-            if (
-                query.length < 2
-            ) {
-
-                hideSuggestions();
-
-                return;
-
-            }
-
-
-            // -------------------------------------------------
-            // Debounce
-            // -------------------------------------------------
-
-            debounceTimer =
-                setTimeout(
-                    () => {
-
-                        getSuggestions(
-                            query
-                        );
-
-                    },
-                    350
-                );
-
-        }
-    );
-
-
-    // =========================================================
-    // KEYBOARD NAVIGATION
-    // =========================================================
-
-    input.addEventListener(
-        "keydown",
-        (event) => {
-
-            const items =
-                suggestionsBox.querySelectorAll(
-                    ".suggestion"
-                );
-
-
-            const dropdownVisible =
-                suggestionsBox.style.display !==
-                "none";
-
-
-            if (
-                !items.length ||
-                !dropdownVisible
-            ) {
-
-                return;
-
-            }
-
-
-            // =================================================
-            // ARROW DOWN
-            // =================================================
-
-            if (
-                event.key ===
-                "ArrowDown"
-            ) {
-
-                event.preventDefault();
-
-
-                selectedIndex++;
+                const dropdownVisible =
+                    suggestionsBox.style.display !==
+                    "none";
 
 
                 if (
-                    selectedIndex >=
-                    items.length
+
+                    !items.length ||
+
+                    !dropdownVisible
+
                 ) {
 
-                    selectedIndex = 0;
+                    return;
 
                 }
 
 
-                updateSelectedItem();
-
-            }
-
-
-            // =================================================
-            // ARROW UP
-            // =================================================
-
-            else if (
-                event.key ===
-                "ArrowUp"
-            ) {
-
-                event.preventDefault();
-
-
-                selectedIndex--;
-
+                // =================================================
+                // ARROW DOWN
+                // =================================================
 
                 if (
-                    selectedIndex < 0
-                ) {
-
-                    selectedIndex =
-                        items.length - 1;
-
-                }
-
-
-                updateSelectedItem();
-
-            }
-
-
-            // =================================================
-            // ENTER
-            // =================================================
-
-            else if (
-                event.key ===
-                "Enter"
-            ) {
-
-                // If a suggestion is selected,
-                // use that exact location.
-
-                if (
-                    selectedIndex >= 0 &&
-                    selectedIndex < items.length
+                    event.key ===
+                    "ArrowDown"
                 ) {
 
                     event.preventDefault();
 
 
-                    const location =
-                        currentLocations[
-                            selectedIndex
-                        ];
+                    selectedIndex++;
 
 
-                    selectLocation(
-                        location
+                    if (
+                        selectedIndex >=
+                        items.length
+                    ) {
+
+                        selectedIndex = 0;
+
+                    }
+
+
+                    updateSelectedItem();
+
+                }
+
+
+                // =================================================
+                // ARROW UP
+                // =================================================
+
+                else if (
+                    event.key ===
+                    "ArrowUp"
+                ) {
+
+                    event.preventDefault();
+
+
+                    selectedIndex--;
+
+
+                    if (
+                        selectedIndex < 0
+                    ) {
+
+                        selectedIndex =
+                            items.length - 1;
+
+                    }
+
+
+                    updateSelectedItem();
+
+                }
+
+
+                // =================================================
+                // ENTER
+                // =================================================
+
+                else if (
+                    event.key ===
+                    "Enter"
+                ) {
+
+                    if (
+
+                        selectedIndex >= 0 &&
+
+                        selectedIndex <
+                        items.length
+
+                    ) {
+
+                        event.preventDefault();
+
+
+                        const location =
+                            currentLocations[
+                                selectedIndex
+                            ];
+
+
+                        selectLocation(
+                            location
+                        );
+
+                    }
+
+                }
+
+
+                // =================================================
+                // ESCAPE
+                // =================================================
+
+                else if (
+                    event.key ===
+                    "Escape"
+                ) {
+
+                    event.preventDefault();
+
+
+                    hideSuggestions();
+
+                }
+
+            }
+        );
+
+
+        // ========================================================
+        // CLOSE DROPDOWN WHEN CLICKING OUTSIDE
+        // ========================================================
+
+        document.addEventListener(
+            "click",
+            (event) => {
+
+                const searchBox =
+                    event.target.closest(
+                        ".search-box"
+                    );
+
+
+                if (!searchBox) {
+
+                    hideSuggestions();
+
+                }
+
+            }
+        );
+
+
+        // ========================================================
+        // INPUT BLUR
+        // ========================================================
+
+        input.addEventListener(
+            "blur",
+            () => {
+
+                setTimeout(
+                    () => {
+
+                        if (
+
+                            !suggestionsBox.matches(
+                                ":hover"
+                            ) &&
+
+                            document.activeElement !==
+                            input
+
+                        ) {
+
+                            hideSuggestions();
+
+                        }
+
+                    },
+                    200
+                );
+
+            }
+        );
+
+
+        // ========================================================
+        // PUBLIC HIDE FUNCTION
+        // ========================================================
+
+        window.hideWeatherSuggestions =
+            hideSuggestions;
+
+
+        // ========================================================
+        // PUBLIC REFRESH FUNCTION
+        // ========================================================
+
+        window.refreshWeatherSuggestions =
+            function () {
+
+                const query =
+                    input.value.trim();
+
+
+                if (
+                    query.length >= 2
+                ) {
+
+                    getSuggestions(
+                        query
                     );
 
                 }
 
-                // If no suggestion is selected,
-                // allow normal search handling.
-
-            }
+            };
 
 
-            // =================================================
-            // ESCAPE
-            // =================================================
+        // ========================================================
+        // INITIALIZATION
+        // ========================================================
 
-            else if (
-                event.key ===
-                "Escape"
-            ) {
+        console.log(
+            "WeatherSphere - Autocomplete initialized successfully."
+        );
 
-                event.preventDefault();
-
-                hideSuggestions();
-
-            }
-
-        }
-    );
-
-
-    // =========================================================
-    // CLOSE WHEN CLICKING OUTSIDE
-    // =========================================================
-
-    document.addEventListener(
-        "click",
-        (event) => {
-
-            const searchBox =
-                event.target.closest(
-                    ".search-box"
-                );
-
-
-            if (!searchBox) {
-
-                hideSuggestions();
-
-            }
-
-        }
-    );
-
-
-    // =========================================================
-    // INPUT BLUR
-    // =========================================================
-
-    input.addEventListener(
-        "blur",
-        () => {
-
-            setTimeout(
-                () => {
-
-                    if (
-                        !suggestionsBox.matches(
-                            ":hover"
-                        ) &&
-                        document.activeElement !==
-                        input
-                    ) {
-
-                        hideSuggestions();
-
-                    }
-
-                },
-                200
-            );
-
-        }
-    );
-
-
-    // =========================================================
-    // PUBLIC HIDE FUNCTION
-    // =========================================================
-
-    window.hideWeatherSuggestions =
-        hideSuggestions;
-
-
-    // =========================================================
-    // PUBLIC REFRESH FUNCTION
-    // =========================================================
-
-    window.refreshWeatherSuggestions =
-        function () {
-
-            const query =
-                input.value.trim();
-
-
-            if (
-                query.length >= 2
-            ) {
-
-                getSuggestions(
-                    query
-                );
-
-            }
-
-        };
-
-
-    // =========================================================
-    // INITIALIZATION
-    // =========================================================
-
-    console.log(
-        "WeatherSphere - Autocomplete initialized successfully."
-    );
-
-});
+    }
+);

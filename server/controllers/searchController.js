@@ -1,7 +1,6 @@
 const axios = require("axios");
 const Search = require("../models/SearchHistory");
 
-
 // ============================================================
 // WEATHER API KEY
 // ============================================================
@@ -19,42 +18,41 @@ const searchLocations = async (req, res) => {
 
     try {
 
-        // ====================================================
-        // GET SEARCH QUERY
-        // ====================================================
+        // --------------------------------------------------------
+        // Get search text from URL
+        // Example:
+        // /api/search/Jalgaon
+        // /api/search/New%20Delhi
+        // --------------------------------------------------------
 
-        const query =
-            decodeURIComponent(req.params.city || "").trim();
+        const query = decodeURIComponent(
+            req.params.city || ""
+        ).trim();
 
 
-        // ----------------------------------------------------
-        // Minimum 2 characters
-        // ----------------------------------------------------
+        // --------------------------------------------------------
+        // Validate query
+        // --------------------------------------------------------
 
-        if (
-            !query ||
-            query.length < 2
-        ) {
+        if (query.length < 2) {
 
             return res.json([]);
 
         }
 
 
-        // ====================================================
-        // API KEY
-        // ====================================================
+        // --------------------------------------------------------
+        // Get API key
+        // --------------------------------------------------------
 
-        const apiKey =
-            getApiKey();
+        const apiKey = getApiKey();
 
 
         if (!apiKey) {
 
             return res.status(500).json({
 
-                message:
-                    "WeatherAPI key is missing."
+                message: "WeatherAPI key is missing."
 
             });
 
@@ -62,302 +60,418 @@ const searchLocations = async (req, res) => {
 
 
         console.log(
-            "WeatherSphere - Location search:",
+            "WeatherSphere - Location Search:",
             query
         );
 
 
-        // ====================================================
-        // SEARCH QUERIES
-        // ====================================================
+        // ========================================================
+        // WEATHERAPI SEARCH REQUEST
+        // ========================================================
 
-        let searchQueries = [query];
+        const response = await axios.get(
 
+            "https://api.weatherapi.com/v1/search.json",
 
-        // ====================================================
-        // JALGAON DISAMBIGUATION
-        // ====================================================
-        //
-        // When the user searches "Jalgaon", search for:
-        //
-        // 1. Jalgaon
-        // 2. Jalgaon Jamod
-        //
-        // This makes it possible for the user to select
-        // the correct Jalgaon.
-        // ====================================================
+            {
 
-        if (
-            query.toLowerCase() === "jalgaon"
-        ) {
+                params: {
 
-            searchQueries = [
+                    key: apiKey,
 
-                "Jalgaon",
-
-                "Jalgaon Jamod"
-
-            ];
-
-        }
-
-
-        // ====================================================
-        // FETCH LOCATIONS
-        // ====================================================
-
-        const responses =
-            await Promise.all(
-
-                searchQueries.map(
-                    searchQuery =>
-
-                        axios.get(
-
-                            "https://api.weatherapi.com/v1/search.json",
-
-                            {
-
-                                params: {
-
-                                    key: apiKey,
-
-                                    q: searchQuery
-
-                                }
-
-                            }
-
-                        )
-
-                )
-
-            );
-
-
-        // ====================================================
-        // COMBINE ALL RESULTS
-        // ====================================================
-
-        let locations = [];
-
-
-        responses.forEach(
-            response => {
-
-                if (
-                    Array.isArray(response.data)
-                ) {
-
-                    locations.push(
-                        ...response.data
-                    );
+                    q: query
 
                 }
 
             }
+
         );
 
 
-        // ====================================================
-        // REMOVE DUPLICATES
-        // ====================================================
+        // ========================================================
+        // GET RESULTS
+        // ========================================================
 
-        const seen = new Set();
-
-
-        locations =
-            locations.filter(
-                location => {
-
-                    const key =
-
-                        `${location.name || ""}|` +
-                        `${location.region || ""}|` +
-                        `${location.country || ""}|` +
-                        `${location.lat || ""}|` +
-                        `${location.lon || ""}`;
+        let locations =
+            Array.isArray(response.data)
+                ? response.data
+                : [];
 
 
-                    if (
-                        seen.has(key)
-                    ) {
+        // ========================================================
+        // NORMALIZED SEARCH QUERY
+        // ========================================================
 
-                        return false;
-
-                    }
-
-
-                    seen.add(key);
-
-                    return true;
-
-                }
-            );
+        const normalizedQuery =
+            query
+                .toLowerCase()
+                .trim();
 
 
-        // ====================================================
+        // ========================================================
+        // SORT / PRIORITIZE LOCATIONS
+        // ========================================================
+        //
+        // This is generic and is NOT hard-coded for Jalgaon.
+        //
+        // Priority:
+        //
+        // 1. Exact location name
+        // 2. Location name starts with search query
+        // 3. Location name contains search query
+        // 4. India
+        // 5. Maharashtra
+        //
+        // Other matching locations are NOT removed.
+        //
+        // This helps with:
+        //
+        // Jalgaon
+        // Jalgaon Jamod
+        // New Delhi
+        // New York
+        // etc.
+        //
+        // ========================================================
+
+        locations.sort((a, b) => {
+
+            const aName =
+                (a.name || "")
+                    .toLowerCase()
+                    .trim();
+
+
+            const bName =
+                (b.name || "")
+                    .toLowerCase()
+                    .trim();
+
+
+            const aCountry =
+                (a.country || "")
+                    .toLowerCase()
+                    .trim();
+
+
+            const bCountry =
+                (b.country || "")
+                    .toLowerCase()
+                    .trim();
+
+
+            const aRegion =
+                (a.region || "")
+                    .toLowerCase()
+                    .trim();
+
+
+            const bRegion =
+                (b.region || "")
+                    .toLowerCase()
+                    .trim();
+
+
+            // ====================================================
+            // 1. EXACT NAME MATCH
+            // ====================================================
+
+            const aExact =
+                aName === normalizedQuery;
+
+            const bExact =
+                bName === normalizedQuery;
+
+
+            if (aExact !== bExact) {
+
+                return aExact ? -1 : 1;
+
+            }
+
+
+            // ====================================================
+            // 2. NAME STARTS WITH QUERY
+            // ====================================================
+
+            const aStarts =
+                aName.startsWith(
+                    normalizedQuery
+                );
+
+            const bStarts =
+                bName.startsWith(
+                    normalizedQuery
+                );
+
+
+            if (aStarts !== bStarts) {
+
+                return aStarts ? -1 : 1;
+
+            }
+
+
+            // ====================================================
+            // 3. NAME CONTAINS QUERY
+            // ====================================================
+
+            const aContains =
+                aName.includes(
+                    normalizedQuery
+                );
+
+            const bContains =
+                bName.includes(
+                    normalizedQuery
+                );
+
+
+            if (aContains !== bContains) {
+
+                return aContains ? -1 : 1;
+
+            }
+
+
+            // ====================================================
+            // 4. INDIA PRIORITY
+            // ====================================================
+
+            const aIndia =
+                aCountry === "india";
+
+            const bIndia =
+                bCountry === "india";
+
+
+            if (aIndia !== bIndia) {
+
+                return aIndia ? -1 : 1;
+
+            }
+
+
+            // ====================================================
+            // 5. MAHARASHTRA PRIORITY
+            // ====================================================
+            //
+            // This gives Maharashtra locations a small priority
+            // without removing locations from other states.
+            //
+            // ====================================================
+
+            const aMaharashtra =
+                aRegion === "maharashtra";
+
+            const bMaharashtra =
+                bRegion === "maharashtra";
+
+
+            if (aMaharashtra !== bMaharashtra) {
+
+                return aMaharashtra ? -1 : 1;
+
+            }
+
+
+            // ====================================================
+            // 6. ALPHABETICAL ORDER
+            // ====================================================
+            //
+            // If two results have the same priority, sort them
+            // alphabetically to keep the dropdown consistent.
+            //
+            // ====================================================
+
+            return aName.localeCompare(bName);
+
+        });
+
+
+        // ========================================================
         // NORMALIZE LOCATION DATA
-        // ====================================================
+        // ========================================================
+        //
+        // WeatherAPI normally provides:
+        //
+        // name
+        // region
+        // country
+        // lat
+        // lon
+        // url
+        //
+        // Some responses may also contain:
+        //
+        // district
+        // county
+        // state_district
+        //
+        // We keep the available information.
+        // ========================================================
 
         const results =
-            locations.map(
-                location => {
+            locations.map(location => ({
 
-                    let district =
-                        location.district ||
-                        location.county ||
-                        "";
+                // ------------------------------------------------
+                // LOCATION NAME
+                // ------------------------------------------------
 
-
-                    // ------------------------------------------------
-                    // Known district information
-                    // ------------------------------------------------
-
-                    if (
-                        location.name &&
-                        location.name.toLowerCase() ===
-                        "jalgaon"
-                    ) {
-
-                        district =
-                            "Jalgaon";
-
-                    }
+                name:
+                    location.name || "",
 
 
-                    if (
-                        location.name &&
-                        location.name.toLowerCase() ===
-                        "jalgaon jamod"
-                    ) {
+                // ------------------------------------------------
+                // DISTRICT
+                // ------------------------------------------------
 
-                        district =
-                            "Buldhana";
-
-                    }
-
-
-                    return {
-
-                        name:
-                            location.name || "",
-
-                        district:
-                            district,
-
-                        region:
-                            location.region || "",
-
-                        country:
-                            location.country || "",
-
-                        lat:
-                            location.lat !== undefined
-                                ? Number(location.lat)
-                                : null,
-
-                        lon:
-                            location.lon !== undefined
-                                ? Number(location.lon)
-                                : null
-
-                    };
-
-                }
-            );
+                district:
+                    location.district ||
+                    location.county ||
+                    location.state_district ||
+                    "",
 
 
-        // ====================================================
-        // SORT JALGAON RESULTS
-        // ====================================================
+                // ------------------------------------------------
+                // STATE / REGION
+                // ------------------------------------------------
+
+                region:
+                    location.region ||
+                    "",
+
+
+                // ------------------------------------------------
+                // COUNTRY
+                // ------------------------------------------------
+
+                country:
+                    location.country ||
+                    "",
+
+
+                // ------------------------------------------------
+                // LATITUDE
+                // ------------------------------------------------
+
+                lat:
+                    location.lat !== undefined
+                        ? Number(location.lat)
+                        : null,
+
+
+                // ------------------------------------------------
+                // LONGITUDE
+                // ------------------------------------------------
+
+                lon:
+                    location.lon !== undefined
+                        ? Number(location.lon)
+                        : null,
+
+
+                // ------------------------------------------------
+                // WEATHERAPI URL
+                // ------------------------------------------------
+
+                url:
+                    location.url ||
+                    ""
+
+            }));
+
+
+        // ========================================================
+        // REMOVE DUPLICATE LOCATIONS
+        // ========================================================
         //
-        // Put exact "Jalgaon" first and "Jalgaon Jamod"
-        // immediately after it.
-        // ====================================================
+        // Two identical results can occasionally appear.
+        //
+        // We use:
+        //
+        // name + region + country + coordinates
+        //
+        // so genuinely different locations with the same name
+        // are NOT accidentally removed.
+        // ========================================================
 
-        if (
-            query.toLowerCase() === "jalgaon"
-        ) {
+        const uniqueResults = [];
 
-            results.sort(
-                (a, b) => {
-
-                    const aName =
-                        a.name.toLowerCase();
-
-                    const bName =
-                        b.name.toLowerCase();
+        const seenLocations = new Set();
 
 
-                    if (
-                        aName === "jalgaon"
-                    ) {
+        results.forEach(location => {
 
-                        return -1;
+            const uniqueKey = [
 
-                    }
+                location.name
+                    .toLowerCase()
+                    .trim(),
 
+                location.region
+                    .toLowerCase()
+                    .trim(),
 
-                    if (
-                        bName === "jalgaon"
-                    ) {
+                location.country
+                    .toLowerCase()
+                    .trim(),
 
-                        return 1;
+                location.lat,
 
-                    }
+                location.lon
 
-
-                    if (
-                        aName === "jalgaon jamod"
-                    ) {
-
-                        return -1;
-
-                    }
+            ].join("|");
 
 
-                    if (
-                        bName === "jalgaon jamod"
-                    ) {
+            if (!seenLocations.has(uniqueKey)) {
 
-                        return 1;
+                seenLocations.add(uniqueKey);
 
-                    }
+                uniqueResults.push(location);
 
+            }
 
-                    return 0;
-
-                }
-            );
-
-        }
+        });
 
 
-        // ====================================================
+        // ========================================================
+        // LIMIT RESULTS
+        // ========================================================
+        //
+        // The frontend also limits results, but limiting here
+        // prevents unnecessary data from being sent.
+        //
+        // ========================================================
+
+        const finalResults =
+            uniqueResults.slice(0, 10);
+
+
+        // ========================================================
         // LOG RESULTS
-        // ====================================================
+        // ========================================================
 
         console.log(
             "WeatherSphere - Location suggestions:",
-            results
+            finalResults
         );
 
 
-        // ====================================================
+        // ========================================================
         // SEND RESULTS
-        // ====================================================
+        // ========================================================
 
-        res.json(
-            results
+        return res.json(
+            finalResults
         );
 
     }
 
 
-    // ========================================================
+    // ============================================================
     // ERROR HANDLING
-    // ========================================================
+    // ============================================================
 
     catch (error) {
 
@@ -371,24 +485,30 @@ const searchLocations = async (req, res) => {
         );
 
 
-        if (
-            error.response
-        ) {
+        // --------------------------------------------------------
+        // WeatherAPI error
+        // --------------------------------------------------------
+
+        if (error.response) {
 
             return res.status(
+
                 error.response.status
-            ).json({
 
-                message:
-                    error.response.data?.error?.message ||
-                    "Unable to search locations."
+            ).json(
 
-            });
+                error.response.data
+
+            );
 
         }
 
 
-        res.status(500).json({
+        // --------------------------------------------------------
+        // Server error
+        // --------------------------------------------------------
+
+        return res.status(500).json({
 
             message:
                 "Unable to search locations."
@@ -400,7 +520,6 @@ const searchLocations = async (req, res) => {
 };
 
 
-
 // ============================================================
 // SAVE SEARCH
 // ============================================================
@@ -409,22 +528,21 @@ const saveSearch = async (req, res) => {
 
     try {
 
-        const search =
-            new Search({
+        const search = new Search({
 
-                city:
-                    req.body.city,
+            city:
+                req.body.city,
 
-                country:
-                    req.body.country
+            country:
+                req.body.country
 
-            });
+        });
 
 
         await search.save();
 
 
-        res.status(201).json(
+        return res.status(201).json(
             search
         );
 
@@ -433,7 +551,7 @@ const saveSearch = async (req, res) => {
 
     catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
 
             message:
                 error.message
@@ -443,7 +561,6 @@ const saveSearch = async (req, res) => {
     }
 
 };
-
 
 
 // ============================================================
@@ -455,16 +572,14 @@ const getSearchHistory = async (req, res) => {
     try {
 
         const history =
-            await Search
-                .find()
-                .sort({
+            await Search.find().sort({
 
-                    createdAt: -1
+                createdAt: -1
 
-                });
+            });
 
 
-        res.json(
+        return res.json(
             history
         );
 
@@ -473,7 +588,7 @@ const getSearchHistory = async (req, res) => {
 
     catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
 
             message:
                 error.message
@@ -483,7 +598,6 @@ const getSearchHistory = async (req, res) => {
     }
 
 };
-
 
 
 // ============================================================
@@ -499,7 +613,7 @@ const deleteSearch = async (req, res) => {
         );
 
 
-        res.json({
+        return res.json({
 
             message:
                 "Deleted Successfully"
@@ -511,7 +625,7 @@ const deleteSearch = async (req, res) => {
 
     catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
 
             message:
                 error.message
@@ -521,7 +635,6 @@ const deleteSearch = async (req, res) => {
     }
 
 };
-
 
 
 // ============================================================
@@ -535,7 +648,7 @@ const clearSearchHistory = async (req, res) => {
         await Search.deleteMany({});
 
 
-        res.json({
+        return res.json({
 
             message:
                 "History Cleared Successfully"
@@ -547,7 +660,7 @@ const clearSearchHistory = async (req, res) => {
 
     catch (error) {
 
-        res.status(500).json({
+        return res.status(500).json({
 
             message:
                 error.message
@@ -557,7 +670,6 @@ const clearSearchHistory = async (req, res) => {
     }
 
 };
-
 
 
 // ============================================================
