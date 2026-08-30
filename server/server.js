@@ -19,15 +19,6 @@ dotenv.config();
 
 
 // ===============================
-// DATABASE
-// ===============================
-
-const connectDB = require("./config/db");
-
-connectDB();
-
-
-// ===============================
 // CREATE EXPRESS APP
 // ===============================
 
@@ -49,19 +40,20 @@ app.use(express.json());
 
 const weatherRoutes = require("./routes/weather");
 const searchRoutes = require("./routes/search");
-const favouriteRoutes = require("./routes/favourite");
 
 
-// Weather API
+// ===============================
+// WEATHER API
+// ===============================
+
 app.use("/api/weather", weatherRoutes);
 
 
-// Search History API
+// ===============================
+// LOCATION SEARCH / AUTOCOMPLETE
+// ===============================
+
 app.use("/api/search", searchRoutes);
-
-
-// Favourite Cities API
-app.use("/api/favourites", favouriteRoutes);
 
 
 // ===============================
@@ -139,14 +131,12 @@ app.use((err, req, res, next) => {
 // START SERVER
 // ===============================
 
-const PORT =
-    process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
-
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
 
     console.log(
-        `🚀 WeatherSphere server running on http://localhost:${PORT}`
+        `🚀 WeatherSphere server running on port ${PORT}`
     );
 
 });
