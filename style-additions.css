@@ -1,0 +1,187 @@
+/* =========================================================
+   WEATHERSPHERE - ADDITIONS
+   Paste this at the VERY END of style.css
+========================================================= */
+
+
+/* =========================================================
+   SEARCH INPUT WRAPPER
+   (keeps the autocomplete dropdown directly under the input)
+========================================================= */
+
+.input-wrap {
+    position: relative;
+    width: 380px;
+    max-width: 100%;
+}
+
+.search-box .input-wrap input {
+    width: 100%;
+    max-width: none;
+}
+
+.input-wrap .suggestions {
+    top: 58px;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    transform: none;
+}
+
+@media (max-width: 1100px) {
+    .input-wrap {
+        width: 350px;
+    }
+}
+
+@media (max-width: 768px) {
+    .input-wrap {
+        width: 100%;
+        max-width: 400px;
+    }
+}
+
+
+/* =========================================================
+   SEARCH HISTORY CARDS (created by searchHistory.js)
+========================================================= */
+
+.historyCard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px 10px 18px;
+    border-radius: 30px;
+    background: rgba(255, 255, 255, 0.18);
+    cursor: pointer;
+    transition: 0.3s ease;
+}
+
+.historyCard:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px);
+}
+
+.delete-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 15px;
+    padding: 2px 4px;
+    border-radius: 50%;
+    transition: 0.2s ease;
+}
+
+.delete-btn:hover {
+    background: rgba(220, 53, 69, 0.7);
+}
+
+
+/* =========================================================
+   ALERT DETAILS (created by alerts.js)
+========================================================= */
+
+.alertHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.alertHeader h3 {
+    margin: 0;
+}
+
+.alertIcon {
+    font-size: 24px;
+}
+
+.alertDetails {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px 20px;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+
+/* =========================================================
+   LIGHT THEME (toggled by theme.js)
+========================================================= */
+
+body.light-theme {
+    background:
+        linear-gradient(
+            135deg,
+            #edf2fb,
+            #ffffff,
+            #d8f3dc
+        );
+    background-size: 400% 400%;
+    color: #222;
+}
+
+body.light-theme nav {
+    background: rgba(255, 255, 255, 0.75);
+}
+
+body.light-theme nav a,
+body.light-theme .hero p {
+    color: #222;
+}
+
+body.light-theme nav a:hover {
+    color: #2d5aa7;
+}
+
+body.light-theme #themeBtn {
+    background: #222;
+    color: white;
+}
+
+body.light-theme .card,
+body.light-theme .weatherCard,
+body.light-theme .searchHistory,
+body.light-theme .chartSection,
+body.light-theme .alertCard,
+body.light-theme .hourCard,
+body.light-theme .favoriteCard,
+body.light-theme .historyCard,
+body.light-theme table {
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme .item {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme th {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme th,
+body.light-theme td {
+    border-bottom-color: rgba(0, 0, 0, 0.10);
+}
+
+body.light-theme .rain {
+    color: #1b5e8a;
+}
+
+body.light-theme .high-rain {
+    color: #c62828;
+}
+
+body.light-theme .favoriteDelete,
+body.light-theme .delete-btn {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+body.light-theme footer {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+body.light-theme ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.35);
+}

@@ -12,7 +12,7 @@
 // NOTE: For a production project, keep this key in the server/.env
 // instead of exposing it in frontend JavaScript.
 
-const API_KEY = "db93b94e7d80403a89a191158260207";
+const API_KEY = "852130d5e5f542239fc191934260410";
 
 
 // ============================================================
